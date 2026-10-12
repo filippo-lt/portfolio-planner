@@ -398,6 +398,7 @@ export function ReportView({ symbol }: { symbol: string }) {
           <EuroVerdict
             amount={simAmount}
             onAmount={setSimAmount}
+            taxCountry={profile.taxCountry}
             fund={{
               // without a reference there is no common period: fall back to the monthly closes
               prices: report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly,
@@ -406,10 +407,13 @@ export function ReportView({ symbol }: { symbol: string }) {
               currency: ins.currency,
               distribution: ins.distribution,
               dist: report.dist?.instrument,
+              type: ins.type,
+              assetClass: ins.assetClass,
+              govtShare: findBenchmark(ins.symbol)?.govtShare,
             }}
             reference={
               benchOk && !sameAsBench && report.chart.length > 0
-                ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark }
+                ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
                 : undefined
             }
             referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}

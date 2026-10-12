@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBenchmarkPrefs } from '../profileStore';
+import { parseBenchmarkPrefs, parseProfile } from '../profileStore';
 
 describe('parseBenchmarkPrefs', () => {
   it('reads the per-class shape', () => {
@@ -17,5 +17,20 @@ describe('parseBenchmarkPrefs', () => {
     expect(parseBenchmarkPrefs('{bad')).toEqual({});
     expect(parseBenchmarkPrefs('{"symbol":5}')).toEqual({});
     expect(parseBenchmarkPrefs('{"equity":5,"nope":"X","mixed":"V60A.DE"}')).toEqual({ mixed: 'V60A.DE' });
+  });
+});
+
+describe('parseProfile tax country', () => {
+  const base = { age: 40, horizonYears: 10, retirementAge: 67, netWorthEur: 50000, maxDrawdownPct: 20, knowledge: 'base' };
+  it('loads an old profile saved without taxCountry', () => {
+    const p = parseProfile(JSON.stringify({ v: 1, profile: base }));
+    expect(p).not.toBeNull();
+    expect(p?.taxCountry).toBeUndefined();
+  });
+  it('keeps a saved taxCountry', () => {
+    expect(parseProfile(JSON.stringify({ v: 1, profile: { ...base, taxCountry: 'IT' } }))?.taxCountry).toBe('IT');
+  });
+  it('rejects an unknown country', () => {
+    expect(parseProfile(JSON.stringify({ v: 1, profile: { ...base, taxCountry: 'XX' } }))).toBeNull();
   });
 });

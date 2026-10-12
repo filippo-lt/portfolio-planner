@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { AssetClass, InstrumentType } from './data/types';
 import type { InvestorProfile } from './profileFit';
+import type { TaxCountry } from './tax/types';
 import { parseUserFees, type UserFees } from './fees';
 import { validateProfile } from './profileValidation';
 import { DEFAULT_SIM_AMOUNT, MAX_SIM_AMOUNT } from './simulation';
@@ -45,7 +46,7 @@ function write(key: string, value: string) {
 export { validateProfile, profileWarnings } from './profileValidation';
 export type { ProfileErrors, ProfileForm } from './profileValidation';
 
-function parseProfile(raw: string | null): InvestorProfile | null {
+export function parseProfile(raw: string | null): InvestorProfile | null {
   if (!raw) return null;
   try {
     const o = JSON.parse(raw);
@@ -57,6 +58,7 @@ function parseProfile(raw: string | null): InvestorProfile | null {
       netWorthEur: String(o.profile.netWorthEur),
       maxDrawdownPct: String(o.profile.maxDrawdownPct),
       knowledge: o.profile.knowledge,
+      taxCountry: typeof o.profile.taxCountry === 'string' ? (o.profile.taxCountry as TaxCountry) : '',
     });
     return Object.keys(errors).length ? null : (profile ?? null);
   } catch {

@@ -2,7 +2,9 @@
 
 import { useId, useState, type ReactNode } from 'react';
 import type { RebasedPoint } from '@/lib/metrics';
-import type { PricePoint } from '@/lib/data/types';
+import type { AssetClass, InstrumentType, PricePoint } from '@/lib/data/types';
+import { taxRulesFor, type TaxCountry, type TaxEstimate } from '@/lib/tax';
+import Link from 'next/link';
 import type { EffectiveFees } from '@/lib/fees';
 import { ACC_LABEL, DIST_LABEL, DIST_UNKNOWN, DIVIDENDS_UNKNOWN, type Distribution } from '@/lib/distribution';
 import type { DistData } from '@/lib/report';
@@ -19,6 +21,11 @@ export interface EuroSide {
   distribution?: Distribution;
   /** Raw closes and payments for a distributing product; absent means the adjusted series is used */
   dist?: DistData;
+  /** For the tax estimate */
+  type?: InstrumentType;
+  assetClass?: AssetClass;
+  /** Government-bond share 0..1, only for curated products */
+  govtShare?: number;
 }
 
 /** Chart points are proportional to the prices, which is all a growth simulation needs. */
@@ -38,9 +45,45 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Result({ title, amount, sim }: { title: string; amount: number; sim: SimResult | undefined }) {
+const eurRange = (a: number, b: number) => (Math.round(a) === Math.round(b) ? fmtEur(a) : `da ${fmtEur(a)} a ${fmtEur(b)}`);
+
+/** Tax lines under the result; without supported rules the box says so and points to the profile. */
+function TaxLines({ sim, tax, taxCountry }: { sim: SimResult; tax: TaxEstimate | undefined; taxCountry: TaxCountry | undefined }) {
+  if (!tax) {
+    return (
+      <p className="mt-1.5 text-xs text-muted">
+        Tasse non incluse ·{' '}
+        <Link href="/profilo" className="font-medium text-accent underline underline-offset-2">
+          Imposta la residenza fiscale
+        </Link>
+        {taxCountry && taxCountry !== 'IT' ? ' (per il tuo paese la stima non è ancora disponibile)' : ''}
+      </p>
+    );
+  }
+  const net = sim.netValue - tax.high;
+  const netHigh = sim.netValue - tax.low;
+  return (
+    <div className="mt-1.5">
+      <dl className="space-y-0.5 text-xs">
+        <Line label="Tasse (stima)">{eurRange(tax.low, tax.high)}</Line>
+        <Line label="Netto dopo tasse (stima)">{eurRange(net, netHigh)}</Line>
+      </dl>
+      <p className="mt-1 text-xs text-muted">Regola usata: {tax.rateLabel}.</p>
+      {tax.notes.map((n) => (
+        <p key={n} className="mt-0.5 text-xs text-muted">
+          {n}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function Result({ title, amount, sim, side, taxCountry }: { title: string; amount: number; sim: SimResult | undefined; side: EuroSide; taxCountry: TaxCountry | undefined }) {
   if (!sim) return <p className="mt-1 text-sm text-muted">{title}: {NA}</p>;
   const { entry, exit } = sim.feesIncluded;
+  const tax = side.type
+    ? taxRulesFor(taxCountry)?.estimate({ gain: sim.netValue - amount, type: side.type, assetClass: side.assetClass, govtShare: side.govtShare, distributing: sim.dividendsEur !== undefined })
+    : undefined;
   const feeText = !entry && !exit ? 'non incluse' : `${fmtEur(sim.entryFeeEur + sim.exitFeeEur)}${entry && exit ? '' : entry ? ' (solo ingresso)' : ' (solo uscita)'}`;
   return (
     <div className="min-w-0">
@@ -57,11 +100,12 @@ function Result({ title, amount, sim }: { title: string; amount: number; sim: Si
         <Line label="Commissioni">{feeText}</Line>
         <Line label="Valore netto">{fmtEur(sim.netValue)}</Line>
       </dl>
+      <TaxLines sim={sim} tax={tax} taxCountry={taxCountry} />
     </div>
   );
 }
 
-function Column({ title, amount, side }: { title: string; amount: number; side: EuroSide | undefined }) {
+function Column({ title, amount, side, taxCountry }: { title: string; amount: number; side: EuroSide | undefined; taxCountry: TaxCountry | undefined }) {
   if (!side) {
     return (
       <div className="min-w-0">
@@ -81,8 +125,8 @@ function Column({ title, amount, side }: { title: string; amount: number; side: 
       <p className="text-xs text-muted">{policy}</p>
       {side.distribution === 'dist' && !side.dist && <p className="text-xs text-muted">{DIVIDENDS_UNKNOWN}</p>}
       {side.distribution === 'acc' && <p className="text-xs text-muted">Proventi reinvestiti nel prezzo.</p>}
-      <Result title="Periodo intero" amount={amount} sim={full} />
-      <Result title="Ultimi 12 mesi" amount={amount} sim={year} />
+      <Result title="Periodo intero" amount={amount} sim={full} side={side} taxCountry={taxCountry} />
+      <Result title="Ultimi 12 mesi" amount={amount} sim={year} side={side} taxCountry={taxCountry} />
       {ter !== undefined && <p className="text-xs text-muted">TER nel periodo intero: circa {fmtEur(ter)}, già incluso nel prezzo.</p>}
     </div>
   );
@@ -95,6 +139,7 @@ export function EuroVerdict({
   fund,
   reference,
   referenceLabel,
+  taxCountry,
 }: {
   amount: number;
   onAmount: (v: number) => void;
@@ -102,6 +147,7 @@ export function EuroVerdict({
   /** Undefined when no reference is chosen or it has no data */
   reference: EuroSide | undefined;
   referenceLabel?: string;
+  taxCountry?: TaxCountry;
 }) {
   const id = useId();
   const [draft, setDraft] = useState<string | undefined>();
@@ -149,13 +195,13 @@ export function EuroVerdict({
         </p>
       )}
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Column title="Questo strumento" amount={amount} side={fund} />
-        <Column title={referenceLabel ? `Riferimento · ${referenceLabel}` : 'Riferimento'} amount={amount} side={reference} />
+        <Column title="Questo strumento" amount={amount} side={fund} taxCountry={taxCountry} />
+        <Column title={referenceLabel ? `Riferimento · ${referenceLabel}` : 'Riferimento'} amount={amount} side={reference} taxCountry={taxCountry} />
       </div>
       {currencies.length > 0 && (
         <p className="mt-3 text-xs text-muted">Valori nella valuta di quotazione ({currencies.join(', ')}): conversione non inclusa</p>
       )}
-      <p className="mt-2 text-xs text-muted">Commissioni: solo quelle di ingresso e uscita disponibili. Imposte e cambio non inclusi.</p>
+      <p className="mt-2 text-xs text-muted">Commissioni: solo quelle di ingresso e uscita disponibili. Cambio non incluso; le tasse sono una stima, solo se hai indicato la residenza fiscale.</p>
     </section>
   );
 }

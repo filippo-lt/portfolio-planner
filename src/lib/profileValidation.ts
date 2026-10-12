@@ -1,4 +1,6 @@
 import type { InvestorProfile, Knowledge } from './profileFit';
+import { isTaxCountry } from './tax';
+import type { TaxCountry } from './tax/types';
 
 export interface ProfileErrors {
   [field: string]: string | undefined;
@@ -11,6 +13,8 @@ export interface ProfileForm {
   netWorthEur: string;
   maxDrawdownPct: string;
   knowledge: Knowledge | '';
+  /** Empty means not set */
+  taxCountry?: TaxCountry | '';
 }
 
 const INT_RE = /^\d{1,3}$/;
@@ -41,6 +45,7 @@ export function validateProfile(f: ProfileForm): { profile?: InvestorProfile; er
   if (!Number.isFinite(worth) || worth > 1e10) errors.netWorthEur = 'Inserisci un importo in euro maggiore o uguale a 0 (solo cifre).';
   if (!Number.isFinite(dd) || dd < 1 || dd > 99) errors.maxDrawdownPct = 'Inserisci una percentuale tra 1 e 99 (solo cifre).';
   if (!f.knowledge) errors.knowledge = 'Seleziona un livello.';
+  if (f.taxCountry && !isTaxCountry(f.taxCountry)) errors.taxCountry = 'Seleziona un paese dall\'elenco.';
   if (Object.keys(errors).length) return { errors };
   return {
     errors,
@@ -51,6 +56,7 @@ export function validateProfile(f: ProfileForm): { profile?: InvestorProfile; er
       netWorthEur: worth,
       maxDrawdownPct: dd,
       knowledge: f.knowledge as Knowledge,
+      ...(f.taxCountry ? { taxCountry: f.taxCountry } : {}),
     },
   };
 }
