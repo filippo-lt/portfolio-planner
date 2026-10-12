@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TabBar, TopBar } from "@/components/AppNav";
+import { BASE_OPEN_GRAPH, SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/brand";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -15,9 +16,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Analisi Strumento",
-  description: "Dati e confronti numerici su ETF e azioni rispetto al tuo profilo di investitore.",
+  metadataBase: siteUrl(),
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   appleWebApp: { capable: true, title: "Analisi", statusBarStyle: "default" },
+  openGraph: {
+    ...BASE_OPEN_GRAPH,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
 };
 
 export const viewport: Viewport = {
