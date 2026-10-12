@@ -12,7 +12,7 @@ Priorities: P0 = do first, P1 = next, P2 = nice to have.
 - Data: `src/lib/data/yahoo.ts`, `src/lib/data/types.ts`, `src/lib/data/provider.ts`, cache in `src/lib/cache.ts`. Prices are adjusted close, so distributions are already reinvested in the numbers.
 - Costs: only `ter` (a fraction) exists in `InstrumentProfile`; shown as "Costo annuo (TER)" in `ReportView.tsx`, tone in `src/lib/tone.ts`. `isin` exists in the type but is only filled when the user searched by ISIN. No entry/exit fees, no tax, no money simulation.
 - Side cards (loss threshold, max drawdown, volatility, horizon vs data): `ReportView.tsx` + `src/lib/profileFit.ts`, `src/lib/tone.ts`. Benchmark comparison table is near line 654 of `ReportView.tsx`.
-- Product rules: `SPEC.md` says "never suggest what to buy" and "no opinions". Friend point 7 ("you should buy this ISIN") touches this rule. See Open questions.
+- Product rules: `SPEC.md` says "never suggest what to buy" and "no opinions". **Decision:** the app does not tell the user what to buy, but it guides them to similar products (same asset class and type) and shows the facts side by side. See item 3.6.
 
 ---
 
@@ -132,7 +132,7 @@ Delivers: clear, early view of what the fund costs (TER, entry/exit fees) compar
 
 ## Phase 3: "What do I take home?" money simulation (core differentiator)
 
-Delivers: plain-euro verdict: invest an amount, see the result after costs in the fund and in the reference product. Comes after Phases 1 and 2 because it needs a fair benchmark and cost data. This is the real value; the chart is secondary.
+Delivers: plain-euro result: invest an amount, see the result after costs in the fund and in the reference product. Comes after Phases 1 and 2 because it needs a fair benchmark and cost data. This is the real value; the chart is secondary.
 
 ### 3.1 Amount input and gross simulation (no tax)
 - Priority: P0 | Size: M | Type: new
@@ -160,13 +160,13 @@ Delivers: plain-euro verdict: invest an amount, see the result after costs in th
 
 ### 3.4 Same-volatility, same-type equivalent ETF
 - Priority: P1 | Size: L | Type: new
-- What/why: Show "what with 1,000 EUR in an ETF of similar volatility and same instrument type". Pick from the curated list (1.5) the product closest in asset class and volatility. Explain the rule used in one line.
+- What/why: Show "what with 1,000 EUR in an ETF of similar volatility and same instrument type". List 2-3 products from the curated list (1.5) with the same asset class and closest volatility, all shown equally (no single "winner", see 3.6). Explain the rule used in one line.
 - Source: friend 3, 7.
 - Files: `src/lib/benchmarks.ts`, `src/lib/simulation.ts`, `src/lib/metrics.ts` (`annualizedVolatility`), `EuroVerdict.tsx`.
 - Acceptance: Selection rule is deterministic and tested; if no product fits, the section is hidden, not guessed.
 - Depends on: 1.5, 3.1.
 
-### 3.5 Shift the page hierarchy: verdict first, chart second
+### 3.5 Shift the page hierarchy: euro result first, chart second
 - Priority: P1 | Size: M | Type: extension
 - What/why: Put the euro box at the top, chart below as supporting evidence. Keep risk cards (loss threshold, drawdown, volatility, horizon) after.
 - Source: friend 7, review note.
@@ -174,9 +174,11 @@ Delivers: plain-euro verdict: invest an amount, see the result after costs in th
 - Acceptance: On mobile the first screen shows the euro numbers without scrolling.
 - Depends on: 3.1.
 
-### 3.6 Wording check for the "should buy this ISIN" message
-- Priority: P0 | Size: S | Type: decision + copy
-- What/why: Friend 7 wants "you are looking for this, but you should buy this ISIN". `SPEC.md` forbids suggesting what to buy and giving verdicts. Decide wording: e.g. "Reference product with the same type: ISIN ... Cost X". Update `SPEC.md` and the AI summary rules if the rule changes.
+### 3.6 "Similar products" wording (decided: guide, don't recommend)
+- Priority: P0 | Size: S | Type: copy + rules
+- What/why: Friend 7 wants "you should buy this ISIN". Decision: no buy suggestion. Instead show a neutral "Prodotti simili" list (same asset class and type) with ISIN, TER, fees and the euro result side by side. The user compares and decides. No ranking words ("migliore", "consigliato"), no "compra", no single highlighted winner. Sort by a stated, neutral rule (e.g. closest volatility) and say the rule.
+- Example copy: "Prodotti simili per tipo e volatilità: ISIN ... · TER 0,10% · 1.000 € → 1.042 €". Not: "Dovresti comprare ISIN ...".
+- Files: `SPEC.md` (rule added), `src/app/api/summary/route.ts` (system prompt), `src/lib/summaryValidation.ts` (block words like "migliore"/"conviene"), `src/lib/tone.ts`.
 - Source: friend 2, 7; SPEC.
 - Files: `SPEC.md`, `src/app/api/summary/route.ts` (system prompt), `src/lib/summaryValidation.ts`, `src/lib/tone.ts`.
 - Acceptance: Written decision in `SPEC.md`; copy reviewed; legal/disclaimer text checked.
@@ -220,7 +222,7 @@ Delivers: net-of-tax euro result for Italian residents only. Comes last because 
 1. Where do entry/exit fees and fund TER come from? Yahoo is weak on this. Options: KID documents, a paid data API (the `DataProvider` interface allows one), or a hand-made table for the top funds. Who keeps it updated?
 2. Where does the curated benchmark list (ticker + ISIN + replication + accumulating/distributing) come from, and who reviews it? How often?
 3. How do we reliably detect asset class and "same instrument type" for a fund from the data we have?
-4. Can we say "buy this ISIN" under our own rules (SPEC) and under Italian rules for financial information? Needs a decision (item 3.6) and maybe legal advice.
+4. Decided: guide to similar products, never suggest what to buy (item 3.6). Still worth a quick legal check that a neutral "similar products" list is not personal advice under Italian rules, especially once it uses the user's profile.
 5. For Italian tax, how do we get the government-bond share of a bond fund (12.5% vs 26%)? Without it, do we show a range or skip tax?
 6. Currency: if the fund is in EUR and the reference is in USD or GBP, do we convert and how do we show it?
 7. Which period is the "last year" figure in the euro box: last 12 months, or calendar year?

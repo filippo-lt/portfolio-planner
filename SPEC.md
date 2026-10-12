@@ -4,6 +4,7 @@ Web app (Next.js App Router + TypeScript + Tailwind, UI in **Italian**). An inve
 
 ## Hard rules
 - Not a trading platform (no buy/sell/deposit), not a portfolio builder (never suggest what to buy), not financial education.
+- Similar products are allowed as guidance, not advice: the app may list products of the same asset class and type with neutral facts (ISIN, TER, fees, euro result) side by side, sorted by a stated neutral rule. No ranking words ("migliore", "conviene"), no single highlighted winner, no "compra".
 - No opinions/judgments ("buono", "cattivo", "compra", "consigliato", "adatto/non adatto" as verdicts). Only facts, numbers and comparisons with the user's profile, phrased neutrally (e.g. "Il drawdown massimo storico (-34%) supera la tolleranza indicata (-20%) di 14 punti").
 - Disclaimer visible on every page: "Informazioni a scopo informativo, non è consulenza finanziaria."
 - All external calls server-side; keys in `.env` (`ANTHROPIC_API_KEY`). Never expose keys to client.
