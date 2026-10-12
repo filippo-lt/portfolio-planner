@@ -32,7 +32,7 @@ const TABS = [
 
 export function TopBar() {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-line bg-bg/95 pt-[env(safe-area-inset-top)] sm:bg-bg/85 sm:backdrop-blur-md">
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 rounded-lg font-semibold tracking-tight">
           <span aria-hidden="true" className="btn-primary grid h-7 w-7 place-items-center rounded-lg text-accent-fg">
@@ -93,7 +93,7 @@ function TabBarInner() {
     <nav
       data-tabbar
       aria-label="Principale"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] sm:hidden"
     >
       <ul className="mx-auto flex max-w-md">
         {TABS.map((t) => {
