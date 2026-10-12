@@ -181,7 +181,7 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 - Files: `SPEC.md` (rule added), `src/app/api/summary/route.ts` (system prompt), `src/lib/summaryValidation.ts` (block words like "migliore"/"conviene"), `src/lib/tone.ts`.
 - Source: friend 2, 7; SPEC.
 - Files: `SPEC.md`, `src/app/api/summary/route.ts` (system prompt), `src/lib/summaryValidation.ts`, `src/lib/tone.ts`.
-- Acceptance: Written decision in `SPEC.md`; copy reviewed; legal/disclaimer text checked.
+- Acceptance: Written decision in `SPEC.md`; copy reviewed. Legal check only before a public launch (not for the MVP).
 - Depends on: none (needed before 3.1 ships to users).
 
 ---
@@ -222,7 +222,7 @@ Delivers: net-of-tax euro result for Italian residents only. Comes last because 
 1. Where do entry/exit fees and fund TER come from? Yahoo is weak on this. Options: KID documents, a paid data API (the `DataProvider` interface allows one), or a hand-made table for the top funds. Who keeps it updated?
 2. Where does the curated benchmark list (ticker + ISIN + replication + accumulating/distributing) come from, and who reviews it? How often?
 3. How do we reliably detect asset class and "same instrument type" for a fund from the data we have?
-4. Decided: guide to similar products, never suggest what to buy (item 3.6). Still worth a quick legal check that a neutral "similar products" list is not personal advice under Italian rules, especially once it uses the user's profile.
+4. Decided: guide to similar products, never suggest what to buy (item 3.6). Legal check not needed for the MVP (private, between friends); revisit only before a public launch.
 5. For Italian tax, how do we get the government-bond share of a bond fund (12.5% vs 26%)? Without it, do we show a range or skip tax?
 6. Currency: if the fund is in EUR and the reference is in USD or GBP, do we convert and how do we show it?
 7. Which period is the "last year" figure in the euro box: last 12 months, or calendar year?
