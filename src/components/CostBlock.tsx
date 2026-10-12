@@ -7,7 +7,7 @@ import { TONE_TEXT, TonePill, cx } from './ui';
 
 const BADGE = { good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined } as const;
 
-function Side({ title, ter, amount, isStock, children }: { title: string; amount: number; ter: number | undefined; isStock?: boolean; children?: ReactNode }) {
+function Side({ title, ter, amount, isStock }: { title: string; amount: number; ter: number | undefined; isStock?: boolean }) {
   const tone = terTone(ter);
   const cost = terCostPerYear(amount, ter);
   const missing = ter === undefined;
@@ -34,7 +34,6 @@ function Side({ title, ter, amount, isStock, children }: { title: string; amount
             ? NA
             : `Su ${fmtEur(amount)} il TER costa circa ${fmtEur(cost)} all'anno`}
       </dd>
-      {children}
     </div>
   );
 }
@@ -61,16 +60,18 @@ export function CostBlock({
 }) {
   return (
     <div className="card mt-4 rounded-2xl border border-line bg-surface p-3.5">
-      <h2 className="text-sm font-semibold">Costo annuo (TER)</h2>
+      <h2 className="text-sm font-semibold">Costi</h2>
       <p className="mt-0.5 text-xs text-muted">Spese correnti, già incluse nel prezzo.</p>
       <dl className="mt-3 grid grid-cols-2 gap-3">
-        <Side title="Questo strumento" amount={amount} ter={fundTer} isStock={isStock}>
-          {fundExtra}
-        </Side>
-        <Side title={benchLabel ? `Riferimento · ${benchLabel}` : 'Riferimento'} ter={benchTer} amount={amount}>
-          {benchExtra}
-        </Side>
+        <Side title="Questo strumento" amount={amount} ter={fundTer} isStock={isStock} />
+        <Side title={benchLabel ? `Riferimento · ${benchLabel}` : 'Riferimento'} ter={benchTer} amount={amount} />
       </dl>
+      {(fundExtra || benchExtra) && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="min-w-0">{fundExtra}</div>
+          <div className="min-w-0">{benchExtra}</div>
+        </div>
+      )}
     </div>
   );
 }

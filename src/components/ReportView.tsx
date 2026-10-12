@@ -227,6 +227,9 @@ export function ReportView({ symbol }: { symbol: string }) {
 
   const ins = report?.instrument;
   const insClass: AssetClass = ins?.assetClass ?? 'unknown';
+  // Stable series for the euro box and the similar products: typing an amount must not rebuild them
+  const fundSeries = useMemo(() => (report ? (report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly) : []), [report]);
+  const benchSeries = useMemo(() => (report && report.chart.length > 0 ? chartSeries(report.chart, 'b') : []), [report]);
   const presets = benchmarksFor(insClass);
   useEffect(() => {
     if (ins) pushRecentReport({ symbol, name: ins.name, type: ins.type });
@@ -405,7 +408,7 @@ export function ReportView({ symbol }: { symbol: string }) {
             taxCountry={profile.taxCountry}
             fund={{
               // without a reference there is no common period: fall back to the monthly closes
-              prices: report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly,
+              prices: fundSeries,
               fees: effectiveFees(ins, userFees),
               ter: isStock ? undefined : ins.ter,
               currency: ins.currency,
@@ -418,7 +421,7 @@ export function ReportView({ symbol }: { symbol: string }) {
             }}
             reference={
               benchOk && !sameAsBench && report.chart.length > 0
-                ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
+                ? { prices: benchSeries, fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
                 : undefined
             }
             referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
@@ -642,13 +645,9 @@ export function ReportView({ symbol }: { symbol: string }) {
             {figures}
           </dl>
 
-          <SimilarProducts
-            symbol={symbol}
-            assetClass={insClass}
-            volatility={report.metrics.volatility}
-            prices={report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly}
-            amount={simAmount}
-          />
+          {!isStock && (
+            <SimilarProducts symbol={symbol} assetClass={insClass} volatility={report.metrics.volatility} prices={fundSeries} amount={simAmount} />
+          )}
 
           <AiSummary report={report} fit={fit} level={level} />
 

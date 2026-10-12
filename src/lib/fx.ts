@@ -18,9 +18,15 @@ export interface FxRate extends PricePoint {
 
 /** Yahoo symbol with the currency per 1 EUR; pence (GBp/GBX) use the pound rate. Undefined for EUR or an unusable code. */
 export function fxSymbol(currency: string | undefined): string | undefined {
+  const c = fxCurrency(currency);
+  return c ? `EUR${c}=X` : undefined;
+}
+
+/** Currency whose rate converts a quote currency: pence (GBp/GBX) use GBP. Undefined for EUR or an unusable code. */
+export function fxCurrency(currency: string | undefined): string | undefined {
   if (!currency) return undefined;
   const c = currency === 'GBp' || currency === 'GBX' ? 'GBP' : currency.toUpperCase();
-  return /^[A-Z]{3}$/.test(c) && c !== 'EUR' ? `EUR${c}=X` : undefined;
+  return /^[A-Z]{3}$/.test(c) && c !== 'EUR' ? c : undefined;
 }
 
 /** Latest rate on or before `date`, at most FX_TOLERANCE_DAYS old; undefined otherwise (never estimated). `rates` ascending by date. */

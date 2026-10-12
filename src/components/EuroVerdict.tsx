@@ -10,7 +10,7 @@ import { ACC_LABEL, DIST_LABEL, DIST_UNKNOWN, DIVIDENDS_UNKNOWN, type Distributi
 import type { DistData } from '@/lib/report';
 import { NA } from '@/lib/profileFit';
 import { fmtDate, fmtEur, fmtNum, fmtPct } from '@/lib/format';
-import { DEFAULT_FX_COST, parseFxCost } from '@/lib/fx';
+import { DEFAULT_FX_COST, type FxRate, fxCurrency, parseFxCost } from '@/lib/fx';
 import { lastYearStart, parseSimAmount, simulate, terCostEstimate, type SimResult } from '@/lib/simulation';
 import { TONE_TEXT, cx, signTone } from './ui';
 
@@ -23,7 +23,7 @@ export interface EuroSide {
   /** Raw closes and payments for a distributing product; absent means the adjusted series is used */
   dist?: DistData;
   /** Non-EUR quote: currency per 1 EUR on the dates of `prices`; absent means no conversion is made */
-  fx?: PricePoint[];
+  fx?: FxRate[];
   /** For the tax estimate */
   type?: InstrumentType;
   assetClass?: AssetClass;
@@ -51,8 +51,9 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
 const eurRange = (a: number, b: number) => (Math.round(a) === Math.round(b) ? fmtEur(a) : `da ${fmtEur(a)} a ${fmtEur(b)}`);
 
 /** Tax lines under the result; without supported rules the box says so and points to the profile. */
-function TaxLines({ sim, tax }: { sim: SimResult; tax: TaxEstimate | undefined }) {
+function TaxLines({ sim, tax, taxCountry }: { sim: SimResult; tax: TaxEstimate | undefined; taxCountry: TaxCountry | undefined }) {
   if (!tax) {
+    if (taxCountry === 'OTHER') return <p className="mt-1.5 text-xs text-muted">Tasse non incluse: paese non ancora supportato</p>;
     return (
       <p className="mt-1.5 text-xs text-muted">
         Tasse non incluse ·{' '}
@@ -100,18 +101,18 @@ function Result({ title, amount, sim, side, taxCountry }: { title: string; amoun
       <p className={cx('text-sm font-medium', TONE_TEXT[signTone(Math.round(sim.gainEur))])}>{gainText(sim.gainEur)}</p>
       <dl className="mt-1.5 space-y-0.5 text-xs">
         <Line label="Valore lordo">{fmtEur(sim.grossValue)}</Line>
-        {sim.dividendsEur !== undefined && <Line label="di cui cedole/dividendi incassati">{fmtEur(sim.dividendsEur)}</Line>}
         <Line label="Commissioni">{feeText}</Line>
+        {sim.dividendsEur !== undefined && <Line label="Cedole/dividendi incassati">{fmtEur(sim.dividendsEur)}</Line>}
         {sim.fx && <Line label="Costo cambio valuta">{fmtEur(sim.fx.costEur)}</Line>}
         <Line label="Valore netto">{fmtEur(sim.netValue)}</Line>
       </dl>
       {sim.fx && side.currency && (
         <p className="mt-1 text-xs text-muted">
-          Cambio EUR/{side.currency} al {fmtDate(sim.fx.startRateDate)}: {fmtNum(sim.fx.startRate, 4)} · al {fmtDate(sim.fx.endRateDate)}: {fmtNum(sim.fx.endRate, 4)}
+          Cambio EUR/{fxCurrency(side.currency)} al {fmtDate(sim.fx.startRateDate)}: {fmtNum(sim.fx.startRate, 4)} · al {fmtDate(sim.fx.endRateDate)}: {fmtNum(sim.fx.endRate, 4)}
         </p>
       )}
       {isForeign(side) && !sim.fx && <p className="mt-1 text-xs text-muted">Cambio {side.currency}: {NA}, conversione non inclusa.</p>}
-      <TaxLines sim={sim} tax={tax} />
+      <TaxLines sim={sim} tax={tax} taxCountry={taxCountry} />
     </div>
   );
 }
@@ -128,14 +129,16 @@ function Column({ title, amount, side, taxCountry, fxCost }: { title: string; am
   const base = { amount, prices: side.prices, entryFee: side.fees.entry?.value, exitFee: side.fees.exit?.value, rawPrices: side.dist?.raw, dividends: side.dist?.dividends, fx: isForeign(side) && side.fx ? { rates: side.fx, cost: fxCost } : undefined };
   const full = simulate(base);
   const year = simulate({ ...base, from: lastYearStart(side.prices) });
+  const isStock = side.type === 'STOCK';
+  const dividendsMissing = side.distribution === 'dist' && (!side.dist || [full, year].some((r) => r && r.dividendsEur === undefined));
   const policy = side.distribution === 'acc' ? ACC_LABEL : side.distribution === 'dist' ? DIST_LABEL : DIST_UNKNOWN;
   const ter = full ? terCostEstimate(amount, side.ter, full.years) : undefined;
   return (
     <div className="min-w-0 space-y-3">
       <h3 className="text-sm font-medium">{title}</h3>
-      <p className="text-xs text-muted">{policy}</p>
-      {side.distribution === 'dist' && !side.dist && <p className="text-xs text-muted">{DIVIDENDS_UNKNOWN}</p>}
-      {side.distribution === 'acc' && <p className="text-xs text-muted">Proventi reinvestiti nel prezzo.</p>}
+      {isStock ? <p className="text-xs text-muted">Dividendi reinvestiti nel prezzo.</p> : <p className="text-xs text-muted">{policy}</p>}
+      {dividendsMissing && <p className="text-xs text-muted">{DIVIDENDS_UNKNOWN}</p>}
+      {!isStock && side.distribution === 'acc' && <p className="text-xs text-muted">Proventi reinvestiti nel prezzo.</p>}
       <Result title="Periodo intero" amount={amount} sim={full} side={side} taxCountry={taxCountry} />
       <Result title="Ultimi 12 mesi" amount={amount} sim={year} side={side} taxCountry={taxCountry} />
       {ter !== undefined && <p className="text-xs text-muted">TER nel periodo intero: circa {fmtEur(ter)}, già incluso nel prezzo.</p>}
@@ -252,7 +255,7 @@ export function EuroVerdict({
         <Column title={referenceLabel ? `Riferimento · ${referenceLabel}` : 'Riferimento'} amount={amount} side={reference} taxCountry={taxCountry} fxCost={fxCost} />
       </div>
       {unconverted.length > 0 && (
-        <p className="mt-3 text-xs text-muted">Cambio {unconverted.map((c) => `EUR/${c}`).join(', ')}: {NA}. Valori nella valuta di quotazione ({unconverted.join(', ')}): conversione non inclusa</p>
+        <p className="mt-3 text-xs text-muted">Cambio {unconverted.map((c) => `EUR/${fxCurrency(c)}`).join(', ')}: {NA}. Valori nella valuta di quotazione ({unconverted.join(', ')}): conversione non inclusa</p>
       )}
       {converted && (
         <p className="mt-3 text-xs text-muted">

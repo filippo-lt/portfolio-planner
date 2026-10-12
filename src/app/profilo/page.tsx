@@ -285,7 +285,7 @@ function TaxCountryField({ value, error, onChange }: { value: string; error?: st
         Residenza fiscale
       </label>
       <p id="taxCountry-hint" className="mt-1 text-sm text-muted">
-        Facoltativa. Serve a stimare le tasse sul risultato in euro; per ora la stima è disponibile solo per l&apos;Italia.
+        Facoltativa. Serve a stimare le tasse sul risultato in euro; la stima è disponibile per Italia, Spagna, Germania, Francia e Regno Unito.
       </p>
       <select
         id="taxCountry"
