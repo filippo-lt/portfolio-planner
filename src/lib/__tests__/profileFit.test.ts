@@ -27,7 +27,10 @@ describe('profileFit', () => {
     expect(dd.text).toContain('13,6 punti');
   });
   it('uses it-IT decimals everywhere (no dot decimals)', () => {
-    const s = profileFit({ ...profile, maxDrawdownPct: 12.5 }, { maxDrawdown: -0.3, volatility: 0.1234, currency: 'EUR' });
+    const s = profileFit(
+      { ...profile, maxDrawdownPct: 12.5 },
+      { maxDrawdown: -0.3, volatility: 0.1234, currency: 'EUR' },
+    );
     const dd = s.find((x) => x.id === 'drawdown')!;
     expect(dd.text).toContain('(-12,5%)');
     expect(dd.text).toContain('17,5 punti');

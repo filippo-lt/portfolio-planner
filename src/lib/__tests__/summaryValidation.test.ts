@@ -50,17 +50,26 @@ describe('validateSummary', () => {
     expect(ok('Il massimo precedente è del 2020-02-20.')).toBe(false);
     expect(ok('Il minimo è stato il 23 marzo 2020.')).toBe(true);
     expect(ok('Il minimo è stato il 24 marzo 2020.')).toBe(false);
-    expect(ok('I dati si riferiscono all\'esercizio 2025.')).toBe(true);
-    expect(ok('I dati si riferiscono all\'esercizio 2019.')).toBe(false);
+    expect(ok("I dati si riferiscono all'esercizio 2025.")).toBe(true);
+    expect(ok("I dati si riferiscono all'esercizio 2019.")).toBe(false);
   });
   it('rejects Italian number words', () => {
     expect(ok('La volatilità è di tredici punti.')).toBe(false);
     expect(ok('Il rendimento è cinque per cento.')).toBe(false);
   });
-  it.each(['migliore', 'meglio', 'ideale', 'acquistare', 'dovresti', 'scegli', 'peggiore', 'evita', 'opportunità', 'dovrebbe', 'buono'])(
-    'rejects forbidden stem %s',
-    (w) => {
-      expect(ok(`Un dato ${w}: 12,2%.`)).toBe(false);
-    },
-  );
+  it.each([
+    'migliore',
+    'meglio',
+    'ideale',
+    'acquistare',
+    'dovresti',
+    'scegli',
+    'peggiore',
+    'evita',
+    'opportunità',
+    'dovrebbe',
+    'buono',
+  ])('rejects forbidden stem %s', (w) => {
+    expect(ok(`Un dato ${w}: 12,2%.`)).toBe(false);
+  });
 });

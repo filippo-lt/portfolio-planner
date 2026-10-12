@@ -30,7 +30,9 @@ describe('classifyAssetClass', () => {
   });
 
   it('classifies a 60/40 split as mixed', () => {
-    expect(classifyAssetClass({ type: 'FUND', name: 'X', stockPosition: 0.6, bondPosition: 0.35 }).assetClass).toBe('mixed');
+    expect(classifyAssetClass({ type: 'FUND', name: 'X', stockPosition: 0.6, bondPosition: 0.35 }).assetClass).toBe(
+      'mixed',
+    );
   });
 
   it('does not call mixed when one side is under 15%', () => {

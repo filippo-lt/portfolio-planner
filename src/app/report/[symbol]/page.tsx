@@ -12,7 +12,11 @@ export async function generateMetadata({ params }: PageProps<'/report/[symbol]'>
   const title = profile ? `${profile.name} (${symbol})` : symbol;
   const description = `Rendimenti, volatilità e drawdown di ${profile?.name ?? symbol}, confrontati con il benchmark e con il tuo profilo di investitore.`;
   const url = `/report/${encodeURIComponent(symbol)}`;
-  const image = { url: `/api/og?symbol=${encodeURIComponent(symbol)}`, ...SHARE_SIZE, alt: `Analisi di ${profile?.name ?? symbol}` };
+  const image = {
+    url: `/api/og?symbol=${encodeURIComponent(symbol)}`,
+    ...SHARE_SIZE,
+    alt: `Analisi di ${profile?.name ?? symbol}`,
+  };
   return {
     title,
     description,

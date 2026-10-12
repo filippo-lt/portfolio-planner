@@ -95,7 +95,13 @@ export function applyGrowth(amount: number, ratio: number, entryFee?: number, ex
   const grossValue = (amount - entryFeeEur) * ratio;
   const exitFeeEur = grossValue * (exit ?? 0);
   const netValue = grossValue - exitFeeEur;
-  return { entryFeeEur, grossValue, exitFeeEur, netValue, feesIncluded: { entry: entry !== undefined, exit: exit !== undefined } };
+  return {
+    entryFeeEur,
+    grossValue,
+    exitFeeEur,
+    netValue,
+    feesIncluded: { entry: entry !== undefined, exit: exit !== undefined },
+  };
 }
 
 /**
@@ -103,7 +109,17 @@ export function applyGrowth(amount: number, ratio: number, entryFee?: number, ex
  * The TER is NOT subtracted: adjusted prices already include it.
  * Undefined when the history does not reach back to `from` (within a week) or covers less than two points.
  */
-export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrices, dividends, fx }: SimInput): SimResult | undefined {
+export function simulate({
+  amount,
+  prices,
+  from,
+  to,
+  entryFee,
+  exitFee,
+  rawPrices,
+  dividends,
+  fx,
+}: SimInput): SimResult | undefined {
   if (!Number.isFinite(amount) || amount <= 0 || prices.length < 2) return undefined;
   if (from && toMs(prices[0].date) > toMs(from) + 7 * DAY) return undefined;
   const s = from ? nearest(prices, from) : prices[0];
@@ -118,7 +134,8 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrice
   const dist = rs && re && rs.close > 0 && re.close > 0 ? { shares: invested / rs.close, end: re.close } : undefined;
   const grossValue = dist ? dist.shares * dist.end : adjusted.grossValue;
   const dividendsEur = dist
-    ? dist.shares * (dividends ?? []).filter((d) => d.date > s.date && d.date <= e.date).reduce((t, d) => t + d.amount, 0)
+    ? dist.shares *
+      (dividends ?? []).filter((d) => d.date > s.date && d.date <= e.date).reduce((t, d) => t + d.amount, 0)
     : undefined;
   const exitFee0 = grossValue * (feeOrUndefined(exitFee) ?? 0);
   const net0 = grossValue - exitFee0 + (dividendsEur ?? 0);
@@ -129,7 +146,17 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrice
   const spread = fx && Number.isFinite(fx.cost) && fx.cost >= 0 && fx.cost < 1 ? fx.cost : 0;
   const m0 = rs0 && re0 ? rs0.close / re0.close : 1;
   const m = m0 * (1 - spread) ** 2;
-  const converted = rs0 && re0 ? { startRate: rs0.close, startRateDate: rs0.rateDate ?? rs0.date, endRate: re0.close, endRateDate: re0.rateDate ?? re0.date, cost: spread, costEur: net0 * (m0 - m) } : undefined;
+  const converted =
+    rs0 && re0
+      ? {
+          startRate: rs0.close,
+          startRateDate: rs0.rateDate ?? rs0.date,
+          endRate: re0.close,
+          endRateDate: re0.rateDate ?? re0.date,
+          cost: spread,
+          costEur: net0 * (m0 - m),
+        }
+      : undefined;
   // Gross, exit fee and dividends move with the exchange rate only; the spread is shown once, as costEur, so net = gross - exit fee + dividends - costEur.
   const k = converted ? m0 : 1;
   const exitFeeEur = exitFee0 * k;
@@ -153,6 +180,7 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrice
 
 /** Informational only: what the TER took over `years`. Already inside the price, never subtracted again. */
 export function terCostEstimate(amount: number, ter: number | undefined, years: number): number | undefined {
-  if (ter === undefined || !Number.isFinite(ter) || !Number.isFinite(amount) || !Number.isFinite(years) || years <= 0) return undefined;
+  if (ter === undefined || !Number.isFinite(ter) || !Number.isFinite(amount) || !Number.isFinite(years) || years <= 0)
+    return undefined;
   return amount * ter * years;
 }

@@ -16,8 +16,17 @@ export interface AssetClassResult {
 }
 
 const BOND_WORDS = [
-  'bond', 'obblig', 'aggregate', 'treasury', 'govt', 'government', 'corporate',
-  'fixed income', 'reddito fisso', 'monetari', 'money market',
+  'bond',
+  'obblig',
+  'aggregate',
+  'treasury',
+  'govt',
+  'government',
+  'corporate',
+  'fixed income',
+  'reddito fisso',
+  'monetari',
+  'money market',
 ];
 const MIXED_WORDS = ['allocation', 'bilanciat', 'multi-asset', 'flessibil', 'mixed', 'lifestrategy'];
 const EQUITY_WORDS = ['equity', 'azionar', 'stock', 'msci', 's&p', 'ftse all-world'];

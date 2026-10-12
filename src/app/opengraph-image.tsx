@@ -6,5 +6,9 @@ export const size = SHARE_SIZE;
 export const contentType = 'image/png';
 
 export default function Image() {
-  return shareCard({ title: 'ETF, fondi e azioni, numeri chiari.', subtitle: SITE_DESCRIPTION, chips: ['Rendimenti', 'Volatilità', 'Drawdown'] });
+  return shareCard({
+    title: 'ETF, fondi e azioni, numeri chiari.',
+    subtitle: SITE_DESCRIPTION,
+    chips: ['Rendimenti', 'Volatilità', 'Drawdown'],
+  });
 }

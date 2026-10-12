@@ -26,9 +26,20 @@ describe('detectDistribution', () => {
 });
 
 describe('simulate distributing', () => {
-  const adj = px([['2024-01-02', 100], ['2024-07-01', 104], ['2025-01-02', 108]]);
-  const raw = px([['2024-01-02', 100], ['2024-07-01', 98], ['2025-01-02', 100]]);
-  const dividends = [{ date: '2024-06-20', amount: 2 }, { date: '2024-01-02', amount: 50 }];
+  const adj = px([
+    ['2024-01-02', 100],
+    ['2024-07-01', 104],
+    ['2025-01-02', 108],
+  ]);
+  const raw = px([
+    ['2024-01-02', 100],
+    ['2024-07-01', 98],
+    ['2025-01-02', 100],
+  ]);
+  const dividends = [
+    { date: '2024-06-20', amount: 2 },
+    { date: '2024-01-02', amount: 50 },
+  ];
 
   it('adds cash received to the price change, not reinvested', () => {
     const r = simulate({ amount: 1000, prices: adj, rawPrices: raw, dividends })!;

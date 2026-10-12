@@ -8,7 +8,11 @@ export type { Tone };
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-type ButtonProps = ComponentProps<'button'> & { variant?: keyof typeof BTN_VARIANT; loading?: boolean; block?: boolean };
+type ButtonProps = ComponentProps<'button'> & {
+  variant?: keyof typeof BTN_VARIANT;
+  loading?: boolean;
+  block?: boolean;
+};
 
 const BTN_BASE =
   'pressable inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold disabled:opacity-60 disabled:active:scale-100';
@@ -33,7 +37,12 @@ export function Button({ variant = 'primary', loading, block, className, childre
   );
 }
 
-export function ButtonLink({ variant = 'primary', block, className, ...rest }: ComponentProps<typeof Link> & { variant?: keyof typeof BTN_VARIANT; block?: boolean }) {
+export function ButtonLink({
+  variant = 'primary',
+  block,
+  className,
+  ...rest
+}: ComponentProps<typeof Link> & { variant?: keyof typeof BTN_VARIANT; block?: boolean }) {
   return <Link {...rest} className={cx(BTN_BASE, BTN_VARIANT[variant], block && 'w-full', className)} />;
 }
 
@@ -54,7 +63,13 @@ export function Card({ className, children, ...rest }: ComponentProps<'div'>) {
   );
 }
 
-export function Chip({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'accent' | 'warn' | 'bad' | 'good' }) {
+export function Chip({
+  children,
+  tone = 'neutral',
+}: {
+  children: ReactNode;
+  tone?: 'neutral' | 'accent' | 'warn' | 'bad' | 'good';
+}) {
   const t = {
     neutral: 'bg-surface-2 text-ink',
     accent: 'bg-accent-soft text-accent',
@@ -62,12 +77,21 @@ export function Chip({ children, tone = 'neutral' }: { children: ReactNode; tone
     bad: 'bg-error-soft text-error',
     good: 'bg-success-soft text-success',
   }[tone];
-  return <span className={cx('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', t)}>{children}</span>;
+  return (
+    <span className={cx('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', t)}>
+      {children}
+    </span>
+  );
 }
 
 /* ---------- semantic tones: good / worry / bad ---------- */
 
-export const TONE_TEXT: Record<Tone, string> = { good: 'text-success', worry: 'text-warn', bad: 'text-error', neutral: '' };
+export const TONE_TEXT: Record<Tone, string> = {
+  good: 'text-success',
+  worry: 'text-warn',
+  bad: 'text-error',
+  neutral: '',
+};
 export const TONE_SOFT: Record<Tone, string> = {
   good: 'bg-success-soft text-success',
   worry: 'bg-warn-soft text-warn',
@@ -83,7 +107,8 @@ const TONE_EDGE: Record<Tone, string> = {
 export const toneEdge = (t: Tone) => cx('border-l-4', TONE_EDGE[t]);
 
 /** Sign of a return: gains read green, losses red. */
-export const signTone = (v: number | undefined): Tone => (v === undefined || v === 0 ? 'neutral' : v > 0 ? 'good' : 'bad');
+export const signTone = (v: number | undefined): Tone =>
+  v === undefined || v === 0 ? 'neutral' : v > 0 ? 'good' : 'bad';
 
 export function ToneIcon({ tone, className }: { tone: Tone; className?: string }) {
   const c = cx('h-4 w-4 shrink-0', className);
@@ -91,13 +116,27 @@ export function ToneIcon({ tone, className }: { tone: Tone; className?: string }
     return (
       <svg viewBox="0 0 20 20" aria-hidden="true" className={c}>
         <circle cx="10" cy="10" r="8.25" fill="currentColor" opacity="0.18" />
-        <path d="M6 10.4 8.7 13 14 7.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d="M6 10.4 8.7 13 14 7.2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   if (tone === 'worry')
     return (
       <svg viewBox="0 0 20 20" aria-hidden="true" className={c}>
-        <path d="M10 2.8 18 16.5H2L10 2.8Z" fill="currentColor" opacity="0.18" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+        <path
+          d="M10 2.8 18 16.5H2L10 2.8Z"
+          fill="currentColor"
+          opacity="0.18"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
         <path d="M10 8v3.8M10 14.2v.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     );
@@ -119,7 +158,13 @@ export function ToneIcon({ tone, className }: { tone: Tone; className?: string }
 /** Status pill with icon: the color is never the only signal, the label always says it. */
 export function TonePill({ tone, children, className }: { tone: Tone; children: ReactNode; className?: string }) {
   return (
-    <span className={cx('inline-flex items-center gap-1 rounded-full py-0.5 pl-1.5 pr-2.5 text-xs font-semibold', TONE_SOFT[tone], className)}>
+    <span
+      className={cx(
+        'inline-flex items-center gap-1 rounded-full py-0.5 pr-2.5 pl-1.5 text-xs font-semibold',
+        TONE_SOFT[tone],
+        className,
+      )}
+    >
       <ToneIcon tone={tone} className="h-3.5 w-3.5" />
       {children}
     </span>
@@ -142,7 +187,8 @@ export function ToneText({ text, rules }: { text: string; rules: HlRule[] }) {
     let best: { i: number; m: string; tone: Tone } | undefined;
     for (const [re, t] of rules) {
       const m = new RegExp(re.source, re.flags.replace('g', '')).exec(rest);
-      if (m && m[0] && (!best || m.index < best.i)) best = { i: m.index, m: m[0], tone: typeof t === 'function' ? t(m[0]) : t };
+      if (m && m[0] && (!best || m.index < best.i))
+        best = { i: m.index, m: m[0], tone: typeof t === 'function' ? t(m[0]) : t };
     }
     if (!best) {
       out.push(rest);
@@ -165,7 +211,17 @@ export const SIGNED_PCT_RULES: HlRule[] = [
   [/\+\s?\d+(?:[.,]\d+)?\s?%/, 'good'],
 ];
 
-export function Callout({ tone, children, className, role }: { tone: Tone | 'accent'; children: ReactNode; className?: string; role?: string }) {
+export function Callout({
+  tone,
+  children,
+  className,
+  role,
+}: {
+  tone: Tone | 'accent';
+  children: ReactNode;
+  className?: string;
+  role?: string;
+}) {
   const bg = tone === 'accent' ? 'bg-accent-soft' : tone === 'neutral' ? 'bg-surface-2' : TONE_SOFT[tone].split(' ')[0];
   const ic = tone === 'accent' ? 'text-accent' : TONE_TEXT[tone] || 'text-muted';
   return (
@@ -209,7 +265,17 @@ export function InfoTip({ term, children }: { term: string; children: ReactNode 
 }
 
 /** Modal <dialog>: bottom sheet on mobile, centered dialog on desktop. Backdrop click closes. */
-export function Sheet({ ref, title, onClose, children }: { ref: Ref<HTMLDialogElement>; title: string; onClose?: () => void; children: ReactNode }) {
+export function Sheet({
+  ref,
+  title,
+  onClose,
+  children,
+}: {
+  ref: Ref<HTMLDialogElement>;
+  title: string;
+  onClose?: () => void;
+  children: ReactNode;
+}) {
   return (
     <dialog
       ref={ref}
@@ -218,7 +284,7 @@ export function Sheet({ ref, title, onClose, children }: { ref: Ref<HTMLDialogEl
       onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}
       className="sheet m-0 mt-auto max-h-[90dvh] w-full max-w-none rounded-t-3xl border-t border-line bg-surface p-0 text-ink shadow-2xl sm:m-auto sm:max-w-md sm:rounded-3xl sm:border"
     >
-      <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3">
+      <div className="px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <div aria-hidden="true" className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line sm:hidden" />
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         {children}
@@ -298,7 +364,11 @@ export function Disclosure({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(
-    () => forceOpen || defaultOpen || hashIs(id) || (openOnDesktop && typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches),
+    () =>
+      forceOpen ||
+      defaultOpen ||
+      hashIs(id) ||
+      (openOnDesktop && typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches),
   );
   const [prevForce, setPrevForce] = useState(forceOpen);
   if (forceOpen !== prevForce) {
@@ -331,7 +401,11 @@ export function Disclosure({
         id={id}
         open={open}
         onToggle={(e) => setOpen(e.currentTarget.open)}
-        className={cx('scroll-mt-28 border border-line bg-surface', sub ? 'mt-3 rounded-xl' : 'card mt-8 rounded-2xl', className)}
+        className={cx(
+          'scroll-mt-28 border border-line bg-surface',
+          sub ? 'mt-3 rounded-xl' : 'card mt-8 rounded-2xl',
+          className,
+        )}
       >
         <summary
           className={cx(
@@ -344,9 +418,19 @@ export function Disclosure({
           <svg
             viewBox="0 0 20 20"
             aria-hidden="true"
-            className={cx('col-start-2 row-span-2 row-start-1 h-5 w-5 text-muted transition-transform motion-reduce:transition-none', open && 'rotate-180')}
+            className={cx(
+              'col-start-2 row-span-2 row-start-1 h-5 w-5 text-muted transition-transform motion-reduce:transition-none',
+              open && 'rotate-180',
+            )}
           >
-            <path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M5 7.5 10 12.5l5-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </summary>
         <div className="px-4 pb-4">{children}</div>
@@ -357,9 +441,19 @@ export function Disclosure({
 
 export function BackLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="pressable -ml-2 inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft">
+    <Link
+      href={href}
+      className="pressable -ml-2 inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft"
+    >
       <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5">
-        <path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d="M12.5 4.5 7 10l5.5 5.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
       {children}
     </Link>

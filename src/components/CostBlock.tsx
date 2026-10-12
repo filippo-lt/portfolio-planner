@@ -6,7 +6,12 @@ import { terTone } from '@/lib/tone';
 import type { EffectiveFees } from '@/lib/fees';
 import { Disclosure, TONE_TEXT, TonePill, cx } from './ui';
 
-export const TER_BADGE = { good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined } as const;
+export const TER_BADGE = {
+  good: 'Costo basso',
+  worry: 'Costo alto',
+  bad: 'Costo molto alto',
+  neutral: undefined,
+} as const;
 
 function Side({ title, ter, amount }: { title: string; amount: number; ter: number | undefined }) {
   const tone = terTone(ter);
@@ -18,7 +23,9 @@ function Side({ title, ter, amount }: { title: string; amount: number; ter: numb
       <dd
         className={cx(
           'mt-1 tabular-nums',
-          missing ? 'text-base font-medium text-muted' : cx('text-[1.75rem] font-semibold leading-tight tracking-tight', TONE_TEXT[tone]),
+          missing
+            ? 'text-base font-medium text-muted'
+            : cx('text-[1.75rem] leading-tight font-semibold tracking-tight', TONE_TEXT[tone]),
         )}
       >
         {missing ? 'TER non disponibile' : fmtPct(ter, 2)}
@@ -28,7 +35,9 @@ function Side({ title, ter, amount }: { title: string; amount: number; ter: numb
           <TonePill tone={tone}>{TER_BADGE[tone]}</TonePill>
         </dd>
       )}
-      <dd className="mt-1.5 text-sm text-muted">{cost === undefined ? NA : `Su ${fmtEur(amount)} il TER costa circa ${fmtEur(cost)} all'anno`}</dd>
+      <dd className="mt-1.5 text-sm text-muted">
+        {cost === undefined ? NA : `Su ${fmtEur(amount)} il TER costa circa ${fmtEur(cost)} all'anno`}
+      </dd>
     </div>
   );
 }
@@ -63,7 +72,9 @@ export function CostBlock({
   const preview = `${fundTer === undefined ? 'TER non disponibile' : `TER ${fmtPct(fundTer, 2)}${cost === undefined ? '' : ` (≈ ${fmtEur(cost)} l'anno su ${fmtEur(amount)})`}`} · ingresso ${feePct(fees.entry)} · uscita ${feePct(fees.exit)}`;
   return (
     <Disclosure id="h-cost" title="Costi e commissioni" preview={preview} defaultOpen={defaultOpen}>
-      <p className="text-sm text-muted">Spese correnti, già incluse nel prezzo.{benchLabel ? ` Riferimento: ${benchLabel}.` : ''}</p>
+      <p className="text-sm text-muted">
+        Spese correnti, già incluse nel prezzo.{benchLabel ? ` Riferimento: ${benchLabel}.` : ''}
+      </p>
       <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Side title="Questo strumento" amount={amount} ter={fundTer} />
         <Side title="Riferimento" ter={benchTer} amount={amount} />

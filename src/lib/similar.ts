@@ -31,7 +31,11 @@ export function similarProducts(
     .filter((c): c is { benchmark: Benchmark; vol: number } => c.vol !== undefined && Number.isFinite(c.vol))
     .filter((c) => c.benchmark.assetClass === instrumentClass)
     .filter((c) => c.benchmark.symbol.toUpperCase() !== sym && !(isin && c.benchmark.isin.toUpperCase() === isin))
-    .sort((a, b) => Math.abs(a.vol - instrumentVol) - Math.abs(b.vol - instrumentVol) || a.benchmark.symbol.localeCompare(b.benchmark.symbol))
+    .sort(
+      (a, b) =>
+        Math.abs(a.vol - instrumentVol) - Math.abs(b.vol - instrumentVol) ||
+        a.benchmark.symbol.localeCompare(b.benchmark.symbol),
+    )
     .slice(0, Math.max(0, n));
 }
 

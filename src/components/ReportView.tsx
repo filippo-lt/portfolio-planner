@@ -10,7 +10,14 @@ import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profile
 import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
 import { terCostPerYear } from '@/lib/costs';
 import { fmtBig, fmtDate, fmtEur, fmtNum, fmtPct } from '@/lib/format';
-import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useFxCost, useInvestorProfile, useSimAmount } from '@/lib/profileStore';
+import {
+  pushRecentReport,
+  useBenchmarkPrefs,
+  useFeeOverride,
+  useFxCost,
+  useInvestorProfile,
+  useSimAmount,
+} from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
 import { CostBlock, TER_BADGE } from './CostBlock';
@@ -55,7 +62,17 @@ const TERMS = {
 
 type Fetched = { key: string; symbol: string; report?: Report; error?: string };
 
-function Section({ id, title, aside, children }: { id: string; title: string; aside?: ReactNode; children: ReactNode }) {
+function Section({
+  id,
+  title,
+  aside,
+  children,
+}: {
+  id: string;
+  title: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section aria-labelledby={id} className="mt-8">
       <div className="flex items-end justify-between gap-3">
@@ -71,11 +88,15 @@ function Section({ id, title, aside, children }: { id: string; title: string; as
 
 function Rows({ rows, bare }: { rows: [ReactNode, ReactNode][]; bare?: boolean }) {
   return (
-    <dl className={cx('divide-y divide-line', !bare && 'card overflow-hidden rounded-2xl border border-line bg-surface')}>
+    <dl
+      className={cx('divide-y divide-line', !bare && 'card overflow-hidden rounded-2xl border border-line bg-surface')}
+    >
       {rows.map(([k, v], i) => (
         <div key={i} className="flex min-h-12 items-center justify-between gap-4 px-4 py-2.5">
           <dt className="text-muted">{k}</dt>
-          <dd className={cx('text-right font-medium tabular-nums', v === NA && 'text-sm font-normal text-muted')}>{v}</dd>
+          <dd className={cx('text-right font-medium tabular-nums', v === NA && 'text-sm font-normal text-muted')}>
+            {v}
+          </dd>
         </div>
       ))}
     </dl>
@@ -89,12 +110,15 @@ function SignedPct({ v, digits }: { v: number | undefined; digits?: number }) {
   return <span className={TONE_TEXT[signTone(v)]}>{v !== undefined && v > 0 ? `+${s}` : s}</span>;
 }
 
-const signedPct = (v: number | undefined): ReactNode => (v === undefined || !Number.isFinite(v) ? NA : <SignedPct v={v} />);
+const signedPct = (v: number | undefined): ReactNode =>
+  v === undefined || !Number.isFinite(v) ? NA : <SignedPct v={v} />;
 
 function bestReturn(m: Metrics): { label: string; value?: number; note?: string } {
   if (m.return5y !== undefined) return { label: 'Rendimento annuo, 5 anni', value: m.return5y };
-  if (m.return3y !== undefined) return { label: 'Rendimento annuo, 3 anni', value: m.return3y, note: '5 anni: dato non disponibile' };
-  if (m.return1y !== undefined) return { label: 'Rendimento annuo, 1 anno', value: m.return1y, note: '5 anni: dato non disponibile' };
+  if (m.return3y !== undefined)
+    return { label: 'Rendimento annuo, 3 anni', value: m.return3y, note: '5 anni: dato non disponibile' };
+  if (m.return1y !== undefined)
+    return { label: 'Rendimento annuo, 1 anno', value: m.return1y, note: '5 anni: dato non disponibile' };
   return { label: 'Rendimento annuo, 5 anni' };
 }
 
@@ -119,7 +143,7 @@ function Figure({
       <dt className="flex items-start justify-between gap-1 text-sm leading-snug text-muted">
         <span className="pt-0.5">{label}</span>
         {tip && (
-          <span className="-mr-1.5 -mt-1 shrink-0">
+          <span className="-mt-1 -mr-1.5 shrink-0">
             <InfoTip term={label}>{tip}</InfoTip>
           </span>
         )}
@@ -127,7 +151,9 @@ function Figure({
       <dd
         className={cx(
           'mt-auto pt-0.5 tabular-nums sm:pt-1',
-          na ? 'text-base font-medium text-muted' : cx('text-xl font-semibold leading-tight tracking-tight sm:text-[1.75rem]', TONE_TEXT[tone]),
+          na
+            ? 'text-base font-medium text-muted'
+            : cx('text-xl leading-tight font-semibold tracking-tight sm:text-[1.75rem]', TONE_TEXT[tone]),
         )}
       >
         {value}
@@ -185,7 +211,9 @@ export function ReportView({ symbol }: { symbol: string }) {
   // The class is known once a report for this symbol has loaded; until then ask for no benchmark
   // and let the server pick the class default.
   const knownClass: AssetClass | undefined =
-    fetched?.symbol === symbol ? (fetched.report?.instrument.assetClass ?? (fetched.report ? 'unknown' : undefined)) : undefined;
+    fetched?.symbol === symbol
+      ? (fetched.report?.instrument.assetClass ?? (fetched.report ? 'unknown' : undefined))
+      : undefined;
   const bench = (knownClass && benchPrefs[knownClass]) || '';
   const key = `${symbol}|${bench}|${reloadTick}`;
   useEffect(() => {
@@ -231,8 +259,14 @@ export function ReportView({ symbol }: { symbol: string }) {
   const ins = report?.instrument;
   const insClass: AssetClass = ins?.assetClass ?? 'unknown';
   // Stable series for the euro box and the similar products: typing an amount must not rebuild them
-  const fundSeries = useMemo(() => (report ? (report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly) : []), [report]);
-  const benchSeries = useMemo(() => (report && report.chart.length > 0 ? chartSeries(report.chart, 'b') : []), [report]);
+  const fundSeries = useMemo(
+    () => (report ? (report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly) : []),
+    [report],
+  );
+  const benchSeries = useMemo(
+    () => (report && report.chart.length > 0 ? chartSeries(report.chart, 'b') : []),
+    [report],
+  );
   const presets = benchmarksFor(insClass);
   useEffect(() => {
     if (ins) pushRecentReport({ symbol, name: ins.name, type: ins.type });
@@ -283,7 +317,8 @@ export function ReportView({ symbol }: { symbol: string }) {
       hashTarget.current = null;
       for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown']) window.removeEventListener(ev, stop);
     };
-    for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown']) window.addEventListener(ev, stop, { passive: true });
+    for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown'])
+      window.addEventListener(ev, stop, { passive: true });
     setTimeout(stop, 8000);
     requestAnimationFrame(scrollToHash);
   }, [report, profile, symbol]);
@@ -390,7 +425,9 @@ export function ReportView({ symbol }: { symbol: string }) {
       note={`La tua soglia: ${fmtNum(ddTol, 0)}%`}
       tip={TERMS.dd}
       tone={ddTone}
-      badge={{ good: 'Entro la soglia', worry: 'Vicina alla soglia', bad: 'Oltre la soglia', neutral: undefined }[ddTone]}
+      badge={
+        { good: 'Entro la soglia', worry: 'Vicina alla soglia', bad: 'Oltre la soglia', neutral: undefined }[ddTone]
+      }
     />,
     ...(rank >= 1
       ? [
@@ -418,7 +455,8 @@ export function ReportView({ symbol }: { symbol: string }) {
           />,
         ]),
   ];
-  const figureCols = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' }[figures.length] ?? 'lg:grid-cols-4';
+  const figureCols =
+    { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' }[figures.length] ?? 'lg:grid-cols-4';
 
   // The one statement that matters most: first over the profile, else to watch, else fine
   const tones = readings.map((r) => r.tone);
@@ -436,7 +474,8 @@ export function ReportView({ symbol }: { symbol: string }) {
     .filter(Boolean)
     .join(' · ');
 
-  const showComp = (ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1;
+  const showComp =
+    (ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1;
   const jump = [
     { href: '#h-bench', label: 'Andamento' },
     { href: '#h-euro', label: 'Simulazione' },
@@ -454,7 +493,7 @@ export function ReportView({ symbol }: { symbol: string }) {
         <div className="lg:col-start-1">
           <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
+              <h1 className="text-xl leading-tight font-semibold tracking-tight sm:text-3xl">{ins.name}</h1>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 <Chip tone="accent">{typeLabel(ins.type)}</Chip>
                 {nameTags(ins.name).map((t) => (
@@ -486,12 +525,17 @@ export function ReportView({ symbol }: { symbol: string }) {
                 </div>
               </div>
               {levelOverride && levelOverride !== profile.knowledge && (
-                <p className="mt-1.5 text-xs text-muted">Solo per questa pagina. Il livello predefinito si cambia dal Profilo.</p>
+                <p className="mt-1.5 text-xs text-muted">
+                  Solo per questa pagina. Il livello predefinito si cambia dal Profilo.
+                </p>
               )}
             </div>
           </header>
 
-          <section aria-labelledby="h-brief" className="card mt-6 scroll-mt-28 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+          <section
+            aria-labelledby="h-brief"
+            className="card mt-6 scroll-mt-28 rounded-2xl border border-line bg-surface p-4 sm:p-5"
+          >
             <h2 id="h-brief" className="text-lg font-semibold tracking-tight">
               In breve
             </h2>
@@ -500,13 +544,21 @@ export function ReportView({ symbol }: { symbol: string }) {
                 <FitTally tones={tones} />
                 <p className="mt-2 text-[0.9375rem] leading-6">
                   <ToneText text={worst.text} rules={fitRules(worst, tones[worstIdx])} />{' '}
-                  <a href="#h-fit" className="whitespace-nowrap font-medium text-accent underline underline-offset-2">
+                  <a href="#h-fit" className="font-medium whitespace-nowrap text-accent underline underline-offset-2">
                     Vedi tutti i punti
                   </a>
                 </p>
               </div>
             )}
-            <dl className={cx('mt-3 grid grid-cols-2 gap-2', figureCols, '[&>*:last-child:nth-child(odd)]:max-lg:col-span-2')}>{figures}</dl>
+            <dl
+              className={cx(
+                'mt-3 grid grid-cols-2 gap-2',
+                figureCols,
+                '[&>*:last-child:nth-child(odd)]:max-lg:col-span-2',
+              )}
+            >
+              {figures}
+            </dl>
             {(refName || needsChoice) && (
               <p className="mt-3 text-sm text-muted">
                 {sameAsBench ? (
@@ -529,7 +581,11 @@ export function ReportView({ symbol }: { symbol: string }) {
 
           <AiSummary report={report} fit={fit} level={level} onSettle={scrollToHash} />
 
-          <Section id="h-bench" title="Andamento rispetto al riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
+          <Section
+            id="h-bench"
+            title="Andamento rispetto al riferimento"
+            aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}
+          >
             <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
             {report.classNote && (
               <Callout tone="accent" className="mt-3">
@@ -549,13 +605,15 @@ export function ReportView({ symbol }: { symbol: string }) {
                 )
               ) : sameAsBench ? (
                 <Callout tone="accent" className="mt-4">
-                  Lo strumento coincide con il riferimento scelto: seleziona un altro riferimento per vedere un confronto.
+                  Lo strumento coincide con il riferimento scelto: seleziona un altro riferimento per vedere un
+                  confronto.
                 </Callout>
               ) : (
                 <>
                   {sameFund && (
                     <Callout tone="accent" className="mt-4">
-                      Il riferimento scelto è lo stesso strumento quotato su un&apos;altra borsa: i valori sono quasi identici.
+                      Il riferimento scelto è lo stesso strumento quotato su un&apos;altra borsa: i valori sono quasi
+                      identici.
                     </Callout>
                   )}
                   {report.chart.length > 0 ? (
@@ -572,13 +630,25 @@ export function ReportView({ symbol }: { symbol: string }) {
               id="h-pick"
               variant="sub"
               title="Cambia riferimento"
-              preview={sameAsBench ? 'Lo strumento stesso: scegline un altro' : benchOk ? `${refName} (${benchOk.profile.symbol})` : 'Scegli un riferimento'}
+              preview={
+                sameAsBench
+                  ? 'Lo strumento stesso: scegline un altro'
+                  : benchOk
+                    ? `${refName} (${benchOk.profile.symbol})`
+                    : 'Scegli un riferimento'
+              }
               forceOpen={needsChoice || !benchOk || !!benchMsg}
               className="mt-4"
             >
-              {noPresets && <p className="text-sm text-muted">Tipo di strumento non riconosciuto: scegli tu il riferimento</p>}
+              {noPresets && (
+                <p className="text-sm text-muted">Tipo di strumento non riconosciuto: scegli tu il riferimento</p>
+              )}
               {!noPresets && (
-                <div role="radiogroup" aria-label="Riferimento" className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2">
+                <div
+                  role="radiogroup"
+                  aria-label="Riferimento"
+                  className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2"
+                >
                   {shownPresets.map((p) => {
                     const on = p.symbol.toUpperCase() === activeBench.toUpperCase();
                     return (
@@ -619,7 +689,8 @@ export function ReportView({ symbol }: { symbol: string }) {
               )}
               {noPresets && activeBench && (
                 <p className="mt-2 text-sm text-muted">
-                  Riferimento scelto: <span className="font-semibold text-ink">{findBenchmark(activeBench)?.label ?? activeBench}</span>
+                  Riferimento scelto:{' '}
+                  <span className="font-semibold text-ink">{findBenchmark(activeBench)?.label ?? activeBench}</span>
                 </p>
               )}
               {hasOptional && (
@@ -686,20 +757,42 @@ export function ReportView({ symbol }: { symbol: string }) {
             }}
             reference={
               benchOk && !sameAsBench && report.chart.length > 0
-                ? { prices: benchSeries, fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
+                ? {
+                    prices: benchSeries,
+                    fees: effectiveFees(benchOk.profile),
+                    ter: benchTer,
+                    currency: benchOk.profile.currency,
+                    distribution: benchOk.profile.distribution,
+                    dist: report.dist?.benchmark,
+                    fx: report.fx?.benchmark,
+                    type: benchOk.profile.type,
+                    assetClass: benchOk.profile.assetClass,
+                    govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare,
+                  }
                 : undefined
             }
             referenceLabel={benchOk && !sameAsBench ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
-            referenceNote={sameAsBench ? 'Il riferimento scelto è lo strumento stesso: scegli un altro riferimento per vedere il confronto.' : undefined}
+            referenceNote={
+              sameAsBench
+                ? 'Il riferimento scelto è lo strumento stesso: scegli un altro riferimento per vedere il confronto.'
+                : undefined
+            }
           />
         </div>
 
         <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:-m-1 lg:p-1">
-            <Disclosure id="h-fit" title="Rispetto al tuo profilo" preview={tones.length > 0 ? <FitTally tones={tones} /> : undefined} openOnDesktop className="lg:mt-0">
+          <div className="lg:sticky lg:top-20 lg:-m-1 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-1">
+            <Disclosure
+              id="h-fit"
+              title="Rispetto al tuo profilo"
+              preview={tones.length > 0 ? <FitTally tones={tones} /> : undefined}
+              openOnDesktop
+              className="lg:mt-0"
+            >
               <div className="-mt-1 mb-3 flex flex-wrap items-center justify-between gap-x-3">
                 <p className="text-sm text-muted">
-                  Soglia di perdita {fmtNum(profile.maxDrawdownPct, 0)}% · orizzonte {profile.horizonYears} {profile.horizonYears === 1 ? 'anno' : 'anni'}
+                  Soglia di perdita {fmtNum(profile.maxDrawdownPct, 0)}% · orizzonte {profile.horizonYears}{' '}
+                  {profile.horizonYears === 1 ? 'anno' : 'anni'}
                 </p>
                 <Link
                   href="/profilo"
@@ -722,7 +815,10 @@ export function ReportView({ symbol }: { symbol: string }) {
                       </li>
                     );
                   return (
-                    <li key={f.id} className={cx('card rounded-2xl border border-line bg-surface p-4', toneEdge(r.tone))}>
+                    <li
+                      key={f.id}
+                      className={cx('card rounded-2xl border border-line bg-surface p-4', toneEdge(r.tone))}
+                    >
                       {r.label && (
                         <div className="mb-1.5">
                           <TonePill tone={r.tone}>{r.label}</TonePill>
@@ -743,7 +839,8 @@ export function ReportView({ symbol }: { symbol: string }) {
         <div className="lg:col-start-1">
           {isStock ? (
             <p className="mt-8 text-sm text-muted">
-              <span className="font-medium text-ink">Costi:</span> nessun TER (le azioni non hanno spese correnti). Commissioni del broker non incluse.
+              <span className="font-medium text-ink">Costi:</span> nessun TER (le azioni non hanno spese correnti).
+              Commissioni del broker non incluse.
               {benchTer !== undefined && ` Il riferimento ha un TER di ${fmtPct(benchTer, 2)}.`}
             </p>
           ) : (
@@ -756,7 +853,12 @@ export function ReportView({ symbol }: { symbol: string }) {
               benchLabel={refName}
               defaultOpen={costOpen}
               fundExtra={
-                <FeeRows fees={fees} dataMissing={{ entry: !ins.entryFee, exit: !ins.exitFee }} userFees={userFees} onUserFees={setUserFees} />
+                <FeeRows
+                  fees={fees}
+                  dataMissing={{ entry: !ins.entryFee, exit: !ins.exitFee }}
+                  userFees={userFees}
+                  onUserFees={setUserFees}
+                />
               }
               benchExtra={benchOk ? <FeeRows fees={effectiveFees(benchOk.profile)} /> : undefined}
             />
@@ -787,13 +889,19 @@ export function ReportView({ symbol }: { symbol: string }) {
                       ]
                     : []) as [string, ReactNode][]),
                   ...(rank >= 2 && m.volatilityYears
-                    ? ([['Volatilità annua calcolata su', `ultimi ${fmtNum(m.volatilityYears)} anni`]] as [string, ReactNode][])
+                    ? ([['Volatilità annua calcolata su', `ultimi ${fmtNum(m.volatilityYears)} anni`]] as [
+                        string,
+                        ReactNode,
+                      ][])
                     : []),
                   ...(rank >= 2
                     ? ([
                         ['Inizio della perdita (massimo)', fmtDate(dd?.peakDate)],
                         ['Fine della perdita (minimo)', fmtDate(dd?.troughDate)],
-                        ['Storico disponibile', m.historyStart ? `${fmtDate(m.historyStart)} – ${fmtDate(m.historyEnd)}` : NA],
+                        [
+                          'Storico disponibile',
+                          m.historyStart ? `${fmtDate(m.historyStart)} – ${fmtDate(m.historyEnd)}` : NA,
+                        ],
                       ] as [string, ReactNode][])
                     : []),
                 ]}
@@ -829,9 +937,15 @@ export function ReportView({ symbol }: { symbol: string }) {
                   bare
                   rows={[
                     ['Ricavi', fmtBig(ins.fundamentals.revenue, ins.fundamentals.currency)],
-                    ['Utile netto', <SignedBig key="ni" v={ins.fundamentals.netIncome} currency={ins.fundamentals.currency} />],
+                    [
+                      'Utile netto',
+                      <SignedBig key="ni" v={ins.fundamentals.netIncome} currency={ins.fundamentals.currency} />,
+                    ],
                     ['Debito totale', fmtBig(ins.fundamentals.totalDebt, ins.fundamentals.currency)],
-                    ['Free cash flow', <SignedBig key="fcf" v={ins.fundamentals.freeCashFlow} currency={ins.fundamentals.currency} />],
+                    [
+                      'Free cash flow',
+                      <SignedBig key="fcf" v={ins.fundamentals.freeCashFlow} currency={ins.fundamentals.currency} />,
+                    ],
                     ['Esercizio', ins.fundamentals.fiscalYear ?? NA],
                   ]}
                 />
@@ -842,7 +956,11 @@ export function ReportView({ symbol }: { symbol: string }) {
           )}
 
           {rank >= 2 && report.notes.length > 0 && (
-            <Disclosure id="h-note" title="Note di calcolo" preview={`${report.notes.length} ${report.notes.length === 1 ? 'nota' : 'note'}`}>
+            <Disclosure
+              id="h-note"
+              title="Note di calcolo"
+              preview={`${report.notes.length} ${report.notes.length === 1 ? 'nota' : 'note'}`}
+            >
               <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                 {report.notes.map((n) => (
                   <li key={n}>{n}</li>
@@ -898,7 +1016,10 @@ function JumpNav({ items }: { items: { href: string; label: string }[] }) {
     <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 h-0 lg:hidden">
       <nav
         aria-label="Sezioni del report"
-        className={cx('absolute -inset-x-4 top-0 border-b border-line bg-bg/95 px-4 sm:-inset-x-6 sm:px-6', !show && 'hidden')}
+        className={cx(
+          'absolute -inset-x-4 top-0 border-b border-line bg-bg/95 px-4 sm:-inset-x-6 sm:px-6',
+          !show && 'hidden',
+        )}
       >
         <ul
           ref={listRef}
@@ -910,7 +1031,10 @@ function JumpNav({ items }: { items: { href: string; label: string }[] }) {
         >
           {items.map((it) => (
             <li key={it.href} className="shrink-0">
-              <a href={it.href} className="pressable inline-flex min-h-11 items-center rounded-full px-2.5 text-sm font-medium text-accent hover:bg-accent-soft">
+              <a
+                href={it.href}
+                className="pressable inline-flex min-h-11 items-center rounded-full px-2.5 text-sm font-medium text-accent hover:bg-accent-soft"
+              >
                 {it.label}
               </a>
             </li>
@@ -928,8 +1052,9 @@ function RollingHelp() {
         Come leggo questo punto?
       </summary>
       <p className="mt-1 px-2 text-muted">
-        Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di partenza) e si calcola il rendimento
-        annuo di ciascuno. Il risultato mostra il periodo con il rendimento più basso e quello con il più alto.
+        Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di
+        partenza) e si calcola il rendimento annuo di ciascuno. Il risultato mostra il periodo con il rendimento più
+        basso e quello con il più alto.
       </p>
     </details>
   );
@@ -938,8 +1063,20 @@ function RollingHelp() {
 /** One line for the collapsed "Composizione": the biggest weights of whatever breakdown exists. */
 function compositionPreview(ins: InstrumentProfile): string | undefined {
   const top = (label: string, xs: { name: string; weight: number }[] | undefined) =>
-    xs && xs.length > 0 ? `${label}: ${xs.slice(0, 3).map((x) => `${x.name} ${fmtPct(x.weight)}`).join(', ')}${xs.length > 3 ? '…' : ''}` : undefined;
-  return top('Principali posizioni', ins.holdings) ?? top('Settori', ins.sectors) ?? top('Paesi', ins.countries?.map((c) => ({ name: countryLabel(c.name), weight: c.weight })));
+    xs && xs.length > 0
+      ? `${label}: ${xs
+          .slice(0, 3)
+          .map((x) => `${x.name} ${fmtPct(x.weight)}`)
+          .join(', ')}${xs.length > 3 ? '…' : ''}`
+      : undefined;
+  return (
+    top('Principali posizioni', ins.holdings) ??
+    top('Settori', ins.sectors) ??
+    top(
+      'Paesi',
+      ins.countries?.map((c) => ({ name: countryLabel(c.name), weight: c.weight })),
+    )
+  );
 }
 
 function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: InstrumentProfile; bm: Metrics }) {
@@ -999,8 +1136,19 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
   );
 }
 
-function CompareCell({ v, signed, wins, className }: { v: number | undefined; signed: boolean; wins: boolean; className?: string }) {
-  if (v === undefined || !Number.isFinite(v)) return <td className={cx('py-2.5 text-right text-xs text-muted', className)}>n.d.</td>;
+function CompareCell({
+  v,
+  signed,
+  wins,
+  className,
+}: {
+  v: number | undefined;
+  signed: boolean;
+  wins: boolean;
+  className?: string;
+}) {
+  if (v === undefined || !Number.isFinite(v))
+    return <td className={cx('py-2.5 text-right text-xs text-muted', className)}>n.d.</td>;
   return (
     <td className={cx('py-2.5 text-right tabular-nums', className)}>
       <span className={cx('inline-flex items-center gap-1', wins ? 'font-bold' : 'font-medium')}>
@@ -1072,13 +1220,20 @@ function AllocList({ title, items }: { title: string; items: { key: string; name
           <li key={h.key}>
             <div className="flex justify-between gap-4 text-sm">
               <span className="flex min-w-0 items-center gap-2">
-                <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: BAR_COLORS[i % BAR_COLORS.length] }} />
+                <span
+                  aria-hidden="true"
+                  className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                  style={{ background: BAR_COLORS[i % BAR_COLORS.length] }}
+                />
                 <span className="truncate">{h.name}</span>
               </span>
               <span className="font-medium tabular-nums">{fmtPct(h.weight)}</span>
             </div>
             <div aria-hidden="true" className="mt-1 h-2 overflow-hidden rounded-full bg-surface-2">
-              <div className="h-full rounded-full" style={{ width: `${Math.min(h.weight, 1) * 100}%`, background: BAR_COLORS[i % BAR_COLORS.length] }} />
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${Math.min(h.weight, 1) * 100}%`, background: BAR_COLORS[i % BAR_COLORS.length] }}
+              />
             </div>
           </li>
         ))}
@@ -1103,9 +1258,14 @@ function Composition({ ins, full }: { ins: InstrumentProfile; full: boolean }) {
               items={holdings.map((h) => ({ key: `${h.symbol}-${h.name}`, name: h.name, weight: h.weight }))}
             />
           )}
-          {sectors && <AllocList title="Settori" items={sectors.map((s) => ({ key: s.name, name: s.name, weight: s.weight }))} />}
+          {sectors && (
+            <AllocList title="Settori" items={sectors.map((s) => ({ key: s.name, name: s.name, weight: s.weight }))} />
+          )}
           {full && ins.countries && (
-            <AllocList title="Paesi" items={ins.countries.map((c) => ({ key: c.name, name: countryLabel(c.name), weight: c.weight }))} />
+            <AllocList
+              title="Paesi"
+              items={ins.countries.map((c) => ({ key: c.name, name: countryLabel(c.name), weight: c.weight }))}
+            />
           )}
         </div>
       )}

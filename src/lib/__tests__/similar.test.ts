@@ -25,9 +25,13 @@ describe('similarProducts', () => {
   });
 
   it('excludes the instrument by symbol or ISIN', () => {
-    expect(similarProducts('equity', 0.15, cands, 3, { symbol: 'vwce.de' }).map((c) => c.benchmark.symbol)).not.toContain('VWCE.DE');
+    expect(
+      similarProducts('equity', 0.15, cands, 3, { symbol: 'vwce.de' }).map((c) => c.benchmark.symbol),
+    ).not.toContain('VWCE.DE');
     const isin = eq.find((b) => b.symbol === 'SWDA.MI')!.isin;
-    expect(similarProducts('equity', 0.15, cands, 3, { symbol: 'X', isin }).map((c) => c.benchmark.symbol)).not.toContain('SWDA.MI');
+    expect(
+      similarProducts('equity', 0.15, cands, 3, { symbol: 'X', isin }).map((c) => c.benchmark.symbol),
+    ).not.toContain('SWDA.MI');
   });
 
   it('keeps only the same class', () => {

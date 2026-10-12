@@ -6,11 +6,40 @@ import { validateSummary } from '../summaryValidation';
 
 describe('findBannedWords', () => {
   it.each([
-    'migliore', 'Migliori', 'peggiore', 'conviene', 'conveniente', 'consigliato', 'Consigliata', 'consigliati',
-    'compra', 'comprare', 'acquista', 'dovresti', 'raccomandato', 'raccomandazione', 'raccomandiamo',
-    'comprando', 'comprato', 'comprata', 'comprati', 'comprate', 'compri', 'comprerei', 'comprereste',
-    'acquistando', 'acquistato', 'acquistata', 'acquistati', 'acquisterei', 'acquisteresti',
-    'dovrebbero', 'dovrebbe', 'dovrei', 'dovresti', 'dovreste',
+    'migliore',
+    'Migliori',
+    'peggiore',
+    'conviene',
+    'conveniente',
+    'consigliato',
+    'Consigliata',
+    'consigliati',
+    'compra',
+    'comprare',
+    'acquista',
+    'dovresti',
+    'raccomandato',
+    'raccomandazione',
+    'raccomandiamo',
+    'comprando',
+    'comprato',
+    'comprata',
+    'comprati',
+    'comprate',
+    'compri',
+    'comprerei',
+    'comprereste',
+    'acquistando',
+    'acquistato',
+    'acquistata',
+    'acquistati',
+    'acquisterei',
+    'acquisteresti',
+    'dovrebbero',
+    'dovrebbe',
+    'dovrei',
+    'dovresti',
+    'dovreste',
   ])('flags %s', (w) => {
     expect(findBannedWords(`Questo prodotto è ${w} oggi.`).length).toBeGreaterThan(0);
   });
@@ -56,7 +85,13 @@ describe('UI copy scan', () => {
       const p = join(d, e.name);
       if (e.isDirectory()) {
         if (e.name !== '__tests__') walk(p);
-      } else if (/\.tsx?$/.test(e.name) && !/tone\.ts$/.test(e.name) && !/summaryValidation\.ts$/.test(e.name) && !p.includes('/api/')) files.push(p);
+      } else if (
+        /\.tsx?$/.test(e.name) &&
+        !/tone\.ts$/.test(e.name) &&
+        !/summaryValidation\.ts$/.test(e.name) &&
+        !p.includes('/api/')
+      )
+        files.push(p);
     }
   };
   dirs.forEach(walk);

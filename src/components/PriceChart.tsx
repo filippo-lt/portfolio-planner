@@ -28,12 +28,12 @@ export function PriceChart({ data, nameA, nameB }: { data: RebasedPoint[]; nameA
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-[var(--chart-a)]" />
             <span className="font-medium">{nameA}</span>
-            <span className="tabular-nums text-muted">{fmtNum(last.a, 0)}</span>
+            <span className="text-muted tabular-nums">{fmtNum(last.a, 0)}</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-0.5 w-3 rounded bg-[var(--chart-b)]" />
             <span className="font-medium">{nameB}</span>
-            <span className="tabular-nums text-muted">{fmtNum(last.b, 0)}</span>
+            <span className="text-muted tabular-nums">{fmtNum(last.b, 0)}</span>
           </span>
         </div>
       </div>
@@ -72,8 +72,23 @@ export function PriceChart({ data, nameA, nameB }: { data: RebasedPoint[]; nameA
               }}
               cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '3 3' }}
             />
-            <Line type="monotone" dataKey="a" stroke="var(--chart-a)" strokeWidth={2.25} dot={false} isAnimationActive={false} />
-            <Line type="monotone" dataKey="b" stroke="var(--chart-b)" strokeWidth={1.75} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
+            <Line
+              type="monotone"
+              dataKey="a"
+              stroke="var(--chart-a)"
+              strokeWidth={2.25}
+              dot={false}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="b"
+              stroke="var(--chart-b)"
+              strokeWidth={1.75}
+              strokeDasharray="5 4"
+              dot={false}
+              isAnimationActive={false}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

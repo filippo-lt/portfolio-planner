@@ -8,7 +8,11 @@ import type { InstrumentType, SymbolCandidate } from '@/lib/data/types';
 import { exchangeLabel, nameTags, typeLabel } from '@/lib/labels';
 import { Button, Callout, Chip, PageLoading, Skeleton, ToneIcon, cx } from '@/components/ui';
 
-type State = { status: 'idle' } | { status: 'loading' } | { status: 'error'; message: string } | { status: 'done'; query: string; results: SymbolCandidate[] };
+type State =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'done'; query: string; results: SymbolCandidate[] };
 
 const FALLBACK_ERR = 'Ricerca non riuscita. Controlla la connessione e riprova.';
 
@@ -93,7 +97,8 @@ export default function Home() {
       {welcome && (
         <Callout tone="good" role="status" className="rise mb-5 rounded-2xl p-4">
           <p>
-            <strong className="font-semibold text-success">Profilo pronto.</strong> Ora cerca lo strumento che vuoi analizzare. Il profilo si modifica in ogni momento da{' '}
+            <strong className="font-semibold text-success">Profilo pronto.</strong> Ora cerca lo strumento che vuoi
+            analizzare. Il profilo si modifica in ogni momento da{' '}
             <Link href="/profilo" className="font-medium text-accent underline underline-offset-2">
               Profilo
             </Link>
@@ -111,7 +116,13 @@ export default function Home() {
         </label>
         <div className="flex min-h-12 flex-1 items-center rounded-xl border border-line-strong/60 bg-surface pl-3 transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
           <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 shrink-0 text-muted">
-            <path d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Zm4.6-1.9L20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path
+              d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Zm4.6-1.9L20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
           <input
             ref={inputRef}
@@ -161,7 +172,7 @@ export default function Home() {
         )}
 
         {state.status === 'error' && (
-          <div className="card rise rounded-2xl border border-line border-l-4 border-l-error bg-surface p-4">
+          <div className="card rise rounded-2xl border border-l-4 border-line border-l-error bg-surface p-4">
             <p className="flex items-start gap-2 font-medium">
               <ToneIcon tone="bad" className="mt-0.5 h-5 w-5 text-error" />
               {state.message}
@@ -173,7 +184,7 @@ export default function Home() {
         )}
 
         {state.status === 'done' && state.results.length === 0 && (
-          <div className="card rise rounded-2xl border border-line border-l-4 border-l-warn bg-surface p-5">
+          <div className="card rise rounded-2xl border border-l-4 border-line border-l-warn bg-surface p-5">
             <p className="flex items-start gap-2 font-semibold">
               <ToneIcon tone="worry" className="mt-0.5 h-5 w-5 text-warn" />
               Nessun risultato per “{state.query}”
@@ -195,7 +206,7 @@ export default function Home() {
           {recent.length > 0 && (
             <section aria-labelledby="h-recent">
               <div className="flex items-center justify-between">
-                <h2 id="h-recent" className="text-sm font-semibold uppercase tracking-wide text-muted">
+                <h2 id="h-recent" className="text-sm font-semibold tracking-wide text-muted uppercase">
                   Visti di recente
                 </h2>
                 <button
@@ -209,10 +220,13 @@ export default function Home() {
               <ul className="card mt-2 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
                 {recent.map((r) => (
                   <li key={r.symbol}>
-                    <Link href={`/report/${encodeURIComponent(r.symbol)}`} className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-surface-2">
+                    <Link
+                      href={`/report/${encodeURIComponent(r.symbol)}`}
+                      className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-surface-2"
+                    >
                       <TypeBadge type={r.type} />
                       <span className="min-w-0 flex-1">
-                        <span className="line-clamp-2 block font-medium leading-snug">{r.name}</span>
+                        <span className="line-clamp-2 block leading-snug font-medium">{r.name}</span>
                         <span className="block text-sm text-muted">
                           {r.symbol} · {typeLabel(r.type)}
                         </span>
@@ -226,19 +240,23 @@ export default function Home() {
           )}
           {recent.length > 0 && (
             <section aria-labelledby="h-ex2">
-              <h2 id="h-ex2" className="text-sm font-semibold uppercase tracking-wide text-muted">
+              <h2 id="h-ex2" className="text-sm font-semibold tracking-wide text-muted uppercase">
                 Esempi di ricerca
               </h2>
               <Examples onPick={pick} compact />
             </section>
           )}
           {recent.length === 0 && (
-            <section aria-labelledby="h-ex" className="rounded-2xl border border-dashed border-accent/30 bg-accent-soft/40 p-5">
+            <section
+              aria-labelledby="h-ex"
+              className="rounded-2xl border border-dashed border-accent/30 bg-accent-soft/40 p-5"
+            >
               <h2 id="h-ex" className="font-semibold">
                 Non sai da dove iniziare?
               </h2>
               <p className="mt-1 text-sm text-muted">
-                L&apos;ISIN lo trovi nella scheda dello strumento sul sito della tua banca o del tuo broker. Oppure prova un esempio:
+                L&apos;ISIN lo trovi nella scheda dello strumento sul sito della tua banca o del tuo broker. Oppure
+                prova un esempio:
               </p>
               <Examples onPick={pick} />
             </section>
@@ -271,11 +289,13 @@ const BADGES: Record<InstrumentType, { text: string; className: string }> = {
   ETF: { text: 'ETF', className: 'bg-accent-soft text-accent' },
   FUND: {
     text: 'FON',
-    className: 'bg-[color-mix(in_srgb,var(--bar-6)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-6)_70%,var(--text))]',
+    className:
+      'bg-[color-mix(in_srgb,var(--bar-6)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-6)_70%,var(--text))]',
   },
   STOCK: {
     text: 'AZ',
-    className: 'bg-[color-mix(in_srgb,var(--bar-2)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-2)_70%,var(--text))]',
+    className:
+      'bg-[color-mix(in_srgb,var(--bar-2)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-2)_70%,var(--text))]',
   },
 };
 
@@ -284,7 +304,10 @@ function TypeBadge({ type }: { type: InstrumentType }) {
   return (
     <span
       aria-hidden="true"
-      className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[0.6875rem] font-bold tracking-wide', b.className)}
+      className={cx(
+        'grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[0.6875rem] font-bold tracking-wide',
+        b.className,
+      )}
     >
       {b.text}
     </span>
@@ -294,7 +317,14 @@ function TypeBadge({ type }: { type: InstrumentType }) {
 function Chevron() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 shrink-0 text-muted">
-      <path d="M7.5 4.5 13 10l-5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M7.5 4.5 13 10l-5.5 5.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -303,15 +333,20 @@ function Results({ results }: { results: SymbolCandidate[] }) {
   const groups = groupByName(results);
   return (
     <div className="rise">
-      <p className="text-sm text-muted">{results.length === 1 ? '1 risultato' : `${results.length} risultati`}. Tocca per aprire il report.</p>
+      <p className="text-sm text-muted">
+        {results.length === 1 ? '1 risultato' : `${results.length} risultati`}. Tocca per aprire il report.
+      </p>
       <ul className="mt-3 space-y-3">
         {groups.map((g) => {
           const head = g[0];
           const tags = nameTags(head.name);
           return (
-            <li key={`${head.name}|${head.type}`} className="card overflow-hidden rounded-2xl border border-line bg-surface">
+            <li
+              key={`${head.name}|${head.type}`}
+              className="card overflow-hidden rounded-2xl border border-line bg-surface"
+            >
               <div className="px-4 pt-3">
-                <p className="font-semibold leading-snug">{head.name}</p>
+                <p className="leading-snug font-semibold">{head.name}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   <Chip tone="accent">{typeLabel(head.type)}</Chip>
                   {tags.map((t) => (
@@ -321,7 +356,9 @@ function Results({ results }: { results: SymbolCandidate[] }) {
                   ))}
                 </div>
                 {g.length > 1 && (
-                  <p className="mt-2 text-xs text-muted">Quotato su {g.length} borse: cambiano valuta e orari di negoziazione, non lo strumento.</p>
+                  <p className="mt-2 text-xs text-muted">
+                    Quotato su {g.length} borse: cambiano valuta e orari di negoziazione, non lo strumento.
+                  </p>
                 )}
               </div>
               <ul className={cx('mt-2', g.length > 1 && 'divide-y divide-line border-t border-line')}>

@@ -29,11 +29,11 @@ describe('BENCHMARKS', () => {
     expect(defaultBenchmarkFor('other')).toBeUndefined();
     expect(defaultBenchmarkFor('unknown')).toBeUndefined();
     expect(defaultBenchmarkFor(undefined)).toBeUndefined();
-    for (const c of ['equity', 'bond', 'mixed'] as const) expect(findBenchmark(defaultBenchmarkFor(c)!)?.assetClass).toBe(c);
+    for (const c of ['equity', 'bond', 'mixed'] as const)
+      expect(findBenchmark(defaultBenchmarkFor(c)!)?.assetClass).toBe(c);
   });
   it('finds case-insensitively', () => {
     expect(findBenchmark('vwce.de')?.isin).toBe('IE00BK5BQT80');
     expect(findBenchmark('NOPE')).toBeUndefined();
   });
 });
-

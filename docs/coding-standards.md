@@ -4,14 +4,14 @@ Short rules. Tools enforce most of them; the rest are for humans and reviewers.
 
 ## Tools
 
-| Tool | What it does | Command |
-|---|---|---|
-| ESLint (`eslint.config.mjs`) | Bugs and bad patterns (Next.js, React, TypeScript rules) | `npm run lint` / `npm run lint:fix` |
-| Prettier (`.prettierrc.json`) | Formatting, Tailwind class order | `npm run format` / `npm run format:check` |
-| TypeScript (`strict`) | Types, incl. Next route types (`next typegen`) | `npm run typecheck` |
-| Vitest | Unit tests | `npm test` / `npm run test:watch` |
-| Husky + lint-staged | On commit: ESLint fix + Prettier on staged files | runs automatically |
-| GitHub Actions (`.github/workflows/ci.yml`) | lint, format, types, tests, build on every PR | runs automatically |
+| Tool                                        | What it does                                             | Command                                   |
+| ------------------------------------------- | -------------------------------------------------------- | ----------------------------------------- |
+| ESLint (`eslint.config.mjs`)                | Bugs and bad patterns (Next.js, React, TypeScript rules) | `npm run lint` / `npm run lint:fix`       |
+| Prettier (`.prettierrc.json`)               | Formatting, Tailwind class order                         | `npm run format` / `npm run format:check` |
+| TypeScript (`strict`)                       | Types, incl. Next route types (`next typegen`)           | `npm run typecheck`                       |
+| Vitest                                      | Unit tests                                               | `npm test` / `npm run test:watch`         |
+| Husky + lint-staged                         | On commit: ESLint fix + Prettier on staged files         | runs automatically                        |
+| GitHub Actions (`.github/workflows/ci.yml`) | lint, format, types, tests, build on every PR            | runs automatically                        |
 
 Before you push: `npm run check` (everything CI runs except the build).
 
@@ -32,13 +32,13 @@ push / PR ──► CI: lint → format:check → typecheck → test → build
 
 ## Naming and files
 
-| Thing | Style | Example |
-|---|---|---|
-| React component file | `PascalCase.tsx` | `ReportView.tsx` |
-| Lib module | `camelCase.ts` | `profileFit.ts` |
-| Test | `src/lib/__tests__/<module>.test.ts` | `metrics.test.ts` |
-| Constants | `UPPER_SNAKE_CASE` | `NA` |
-| Imports from `src` | `@/` alias | `import { fmtPct } from '@/lib/format'` |
+| Thing                | Style                                | Example                                 |
+| -------------------- | ------------------------------------ | --------------------------------------- |
+| React component file | `PascalCase.tsx`                     | `ReportView.tsx`                        |
+| Lib module           | `camelCase.ts`                       | `profileFit.ts`                         |
+| Test                 | `src/lib/__tests__/<module>.test.ts` | `metrics.test.ts`                       |
+| Constants            | `UPPER_SNAKE_CASE`                   | `NA`                                    |
+| Imports from `src`   | `@/` alias                           | `import { fmtPct } from '@/lib/format'` |
 
 UI text is Italian; code, comments, commits and docs are English.
 

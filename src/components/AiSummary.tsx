@@ -10,7 +10,17 @@ const DEBOUNCE_MS = 600;
 /** Successful summaries by key, so going back to a level or benchmark already seen costs no request */
 const SUMMARY_CACHE = new Map<string, string>();
 
-export function AiSummary({ report, fit, level, onSettle }: { report: Report; fit: FitStatement[]; level: Knowledge; onSettle?: () => void }) {
+export function AiSummary({
+  report,
+  fit,
+  level,
+  onSettle,
+}: {
+  report: Report;
+  fit: FitStatement[];
+  level: Knowledge;
+  onSettle?: () => void;
+}) {
   const key = `${report.generatedAt}|${level}|${fit.map((f) => f.text).join('|')}`;
   const [state, setState] = useState<{ key: string; summary: string | null } | null>(null);
 
@@ -47,7 +57,10 @@ export function AiSummary({ report, fit, level, onSettle }: { report: Report; fi
 
   if (current?.key === key && !current.summary) return null; // not configured or not validated: hidden
   return (
-    <section aria-labelledby="h-ai" className="card mt-8 rounded-2xl border border-accent/20 bg-gradient-to-br from-accent-soft/70 to-surface p-4">
+    <section
+      aria-labelledby="h-ai"
+      className="card mt-8 rounded-2xl border border-accent/20 bg-gradient-to-br from-accent-soft/70 to-surface p-4"
+    >
       <h2 id="h-ai" className="flex items-center gap-2 text-lg font-semibold tracking-tight text-accent">
         <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 text-accent">
           <path d="M10 2.5l1.6 4.4 4.4 1.6-4.4 1.6L10 14.5l-1.6-4.4L4 8.5l4.4-1.6L10 2.5Z" fill="currentColor" />
@@ -60,7 +73,8 @@ export function AiSummary({ report, fit, level, onSettle }: { report: Report; fi
             <ToneText text={current.summary ?? ''} rules={SIGNED_PCT_RULES} />
           </p>
           <p className="mt-2 text-xs text-muted">
-            Testo generato automaticamente (AI) a partire dai soli numeri di questo report; i valori sono verificati sui dati.
+            Testo generato automaticamente (AI) a partire dai soli numeri di questo report; i valori sono verificati sui
+            dati.
           </p>
         </>
       ) : (

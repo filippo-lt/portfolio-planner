@@ -25,7 +25,9 @@ export const COST_OVERRIDES: CostOverride[] = BENCHMARKS.map((b) => ({
 export function findCostOverride(p: Pick<InstrumentProfile, 'symbol' | 'isin'>): CostOverride | undefined {
   const sym = p.symbol.toUpperCase();
   const isin = p.isin?.toUpperCase();
-  return COST_OVERRIDES.find((o) => (o.symbol && o.symbol.toUpperCase() === sym) || (o.isin && isin && o.isin.toUpperCase() === isin));
+  return COST_OVERRIDES.find(
+    (o) => (o.symbol && o.symbol.toUpperCase() === sym) || (o.isin && isin && o.isin.toUpperCase() === isin),
+  );
 }
 
 /** Fills missing fees from the table; fees already on the profile are kept. */

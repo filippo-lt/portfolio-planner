@@ -12,7 +12,15 @@ const TABS = [
     href: '/',
     label: 'Cerca',
     match: (p: string) => p === '/' || p.startsWith('/report'),
-    icon: <path d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Zm4.6-1.9L20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />,
+    icon: (
+      <path
+        d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Zm4.6-1.9L20 20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    ),
   },
   {
     href: '/profilo',
@@ -37,7 +45,14 @@ export function TopBar() {
         <Link href="/" className="flex items-center gap-2 rounded-lg font-semibold tracking-tight">
           <span aria-hidden="true" className="btn-primary grid h-7 w-7 place-items-center rounded-lg text-accent-fg">
             <svg viewBox="0 0 20 20" className="h-4 w-4">
-              <path d="M3 14l4-4 3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M3 14l4-4 3 3 7-7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </span>
           Analisi Strumento
@@ -103,9 +118,17 @@ function TabBarInner() {
               <Link
                 href={t.href}
                 aria-current={on ? 'page' : undefined}
-                className={cx('pressable flex h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium', on ? 'text-accent' : 'text-muted')}
+                className={cx(
+                  'pressable flex h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium',
+                  on ? 'text-accent' : 'text-muted',
+                )}
               >
-                <span className={cx('grid h-7 w-14 place-items-center rounded-full transition-colors', on && 'bg-accent-soft')}>
+                <span
+                  className={cx(
+                    'grid h-7 w-14 place-items-center rounded-full transition-colors',
+                    on && 'bg-accent-soft',
+                  )}
+                >
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.375rem] w-[1.375rem]">
                     {t.icon}
                   </svg>
