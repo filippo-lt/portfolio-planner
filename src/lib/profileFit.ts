@@ -68,14 +68,16 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
   if (m.maxDrawdown === undefined) {
     out.push({ id: 'drawdown', status: 'info', text: `Perdita massima storica: ${NA}.` });
   } else {
-    const dd = Math.round(m.maxDrawdown * 100);
+    // One decimal, as in the figure tile of the report
+    const dd = Math.round(m.maxDrawdown * 1000) / 10;
+    const ddText = dd.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const tol = -Math.abs(profile.maxDrawdownPct);
     const diff = Math.round(Math.abs(Math.abs(dd) - Math.abs(tol)) * 10) / 10;
     if (Math.abs(dd) > Math.abs(tol)) {
       out.push({
         id: 'drawdown',
         status: 'oltre',
-        text: `La perdita massima storica (${it(dd)}%) supera la soglia indicata (${it(tol)}%) di ${points(diff)}. La soglia è riferita all'intero portafoglio.`,
+        text: `La perdita massima storica (${ddText}%) supera la soglia indicata (${it(tol)}%) di ${points(diff)}. La soglia è riferita all'intero portafoglio.`,
       });
     } else {
       out.push({
@@ -83,8 +85,8 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
         status: 'entro',
         text:
           diff === 0
-            ? `La perdita massima storica (${it(dd)}%) coincide con la soglia indicata (${it(tol)}%). La soglia è riferita all'intero portafoglio.`
-            : `La perdita massima storica (${it(dd)}%) è inferiore alla soglia indicata (${it(tol)}%) di ${points(diff)}. La soglia è riferita all'intero portafoglio.`,
+            ? `La perdita massima storica (${ddText}%) coincide con la soglia indicata (${it(tol)}%). La soglia è riferita all'intero portafoglio.`
+            : `La perdita massima storica (${ddText}%) è inferiore alla soglia indicata (${it(tol)}%) di ${points(diff)}. La soglia è riferita all'intero portafoglio.`,
       });
     }
   }

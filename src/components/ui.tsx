@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, type ComponentProps, type ReactNode, type Ref } from 'react';
+import { useRef, useState, useEffect, type ComponentProps, type ReactNode, type Ref } from 'react';
 import type { Tone } from '@/lib/tone';
 
 export type { Tone };
@@ -232,11 +232,13 @@ export function SegmentedControl<T extends string>({
   value,
   options,
   onChange,
+  compact,
 }: {
   label: string;
   value: T;
   options: { value: T; label: string }[];
   onChange: (v: T) => void;
+  compact?: boolean;
 }) {
   return (
     <div role="radiogroup" aria-label={label} className="flex rounded-xl bg-surface-2 p-1">
@@ -250,7 +252,8 @@ export function SegmentedControl<T extends string>({
             aria-checked={on}
             onClick={() => onChange(o.value)}
             className={cx(
-              'pressable min-h-10 flex-1 rounded-lg px-3 text-sm font-medium',
+              'pressable flex-1 rounded-lg font-medium',
+              compact ? 'min-h-10 min-w-[4.5rem] px-2.5 text-xs' : 'min-h-10 px-3 text-sm',
               on ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink',
             )}
           >
@@ -259,6 +262,96 @@ export function SegmentedControl<T extends string>({
         );
       })}
     </div>
+  );
+}
+
+const hashIs = (id: string | undefined) => !!id && typeof window !== 'undefined' && window.location.hash === `#${id}`;
+
+/**
+ * Collapsible block on <details>/<summary>: native keyboard support, state exposed to assistive tech.
+ * Screen readers (VoiceOver especially) flatten a heading inside <summary> into the button name, so sections get
+ * a visually hidden heading just before the <details>: heading navigation lists it even when collapsed.
+ * A link or hash pointing at `id` opens it; `forceOpen` opens it when something inside needs attention.
+ */
+export function Disclosure({
+  id,
+  title,
+  preview,
+  defaultOpen = false,
+  openOnDesktop = false,
+  forceOpen = false,
+  variant = 'section',
+  className,
+  children,
+}: {
+  id?: string;
+  title: string;
+  /** One-line value shown under the title while collapsed */
+  preview?: ReactNode;
+  defaultOpen?: boolean;
+  /** Open from the start on wide screens (lg), collapsed on phones; the user can still toggle */
+  openOnDesktop?: boolean;
+  forceOpen?: boolean;
+  /** `sub` is a toggle inside a section: no heading, lighter box */
+  variant?: 'section' | 'sub';
+  className?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(
+    () => forceOpen || defaultOpen || hashIs(id) || (openOnDesktop && typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches),
+  );
+  const [prevForce, setPrevForce] = useState(forceOpen);
+  if (forceOpen !== prevForce) {
+    setPrevForce(forceOpen);
+    if (forceOpen) setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!id) return;
+    const onHash = () => hashIs(id) && setOpen(true);
+    // Also catches a link to the hash that is already in the URL, which fires no hashchange
+    const onClick = (e: MouseEvent) => {
+      const a = e.target instanceof Element ? e.target.closest('a[href^="#"]') : null;
+      if (a?.getAttribute('href') === `#${id}`) setOpen(true);
+    };
+    window.addEventListener('hashchange', onHash);
+    document.addEventListener('click', onClick);
+    return () => {
+      window.removeEventListener('hashchange', onHash);
+      document.removeEventListener('click', onClick);
+    };
+  }, [id]);
+
+  const sub = variant === 'sub';
+  const titleCls = sub ? 'col-start-1 text-sm font-medium' : 'col-start-1 text-lg font-semibold tracking-tight';
+  return (
+    <>
+      {!sub && <h2 className="sr-only">{title}</h2>}
+      <details
+        id={id}
+        open={open}
+        onToggle={(e) => setOpen(e.currentTarget.open)}
+        className={cx('scroll-mt-28 border border-line bg-surface', sub ? 'mt-3 rounded-xl' : 'card mt-8 rounded-2xl', className)}
+      >
+        <summary
+          className={cx(
+            'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5',
+            sub ? 'min-h-11 rounded-xl' : 'min-h-14 rounded-2xl',
+          )}
+        >
+          <span className={titleCls}>{title}</span>
+          {preview && !open && <span className="col-start-1 block text-sm text-muted">{preview}</span>}
+          <svg
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+            className={cx('col-start-2 row-span-2 row-start-1 h-5 w-5 text-muted transition-transform motion-reduce:transition-none', open && 'rotate-180')}
+          >
+            <path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </summary>
+        <div className="px-4 pb-4">{children}</div>
+      </details>
+    </>
   );
 }
 

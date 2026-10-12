@@ -58,6 +58,11 @@ describe('applyCostOverrides', () => {
     const p = applyCostOverrides({ ...base, symbol: 'VWCE.DE', entryFee: { value: 0.02, source: 'manual' } });
     expect(p.entryFee?.value).toBe(0.02);
   });
+  it('fills a missing TER from the curated list, keeps the provider one', () => {
+    expect(applyCostOverrides({ ...base, symbol: 'VWCE.DE', ter: undefined }).ter).toBe(0.0019);
+    expect(applyCostOverrides({ ...base, isin: 'IE00B4L5Y983', ter: undefined }).ter).toBe(0.002);
+    expect(applyCostOverrides({ ...base, symbol: 'VWCE.DE', ter: 0.005 }).ter).toBe(0.005);
+  });
   it('marks every override unreviewed', () => {
     expect(COST_OVERRIDES.every((o) => o.reviewed === false)).toBe(true);
   });

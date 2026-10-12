@@ -101,7 +101,7 @@ export function searchInstruments(q: string): Promise<SymbolCandidate[]> {
 }
 
 const profileOf = (s: string) =>
-  cached(`profile:v2:${s}`, TTL_PROFILE, async () => {
+  cached(`profile:v3:${s}`, TTL_PROFILE, async () => {
     const p = applyCostOverrides(await provider.getProfile(s));
     const distribution = detectDistribution(p.symbol, p.name, p.type);
     return distribution ? { ...p, distribution } : p;

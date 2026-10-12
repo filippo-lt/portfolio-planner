@@ -17,9 +17,14 @@ describe('profileFit', () => {
     const s = profileFit(profile, { maxDrawdown: -0.34, volatility: 0.18, currency: 'EUR' });
     const dd = s.find((x) => x.id === 'drawdown')!;
     expect(dd.status).toBe('oltre');
-    expect(dd.text).toContain('(-34%)');
+    expect(dd.text).toContain('(-34,0%)');
     expect(dd.text).toContain('(-20%)');
     expect(dd.text).toContain('14 punti');
+  });
+  it('shows the drawdown with one decimal, like the report tile', () => {
+    const dd = profileFit(profile, { maxDrawdown: -0.3357, currency: 'EUR' }).find((x) => x.id === 'drawdown')!;
+    expect(dd.text).toContain('(-33,6%)');
+    expect(dd.text).toContain('13,6 punti');
   });
   it('uses it-IT decimals everywhere (no dot decimals)', () => {
     const s = profileFit({ ...profile, maxDrawdownPct: 12.5 }, { maxDrawdown: -0.3, volatility: 0.1234, currency: 'EUR' });

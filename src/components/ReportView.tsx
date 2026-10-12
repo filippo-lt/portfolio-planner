@@ -7,12 +7,13 @@ import type { Report, Metrics } from '@/lib/report';
 import type { AssetClass, InstrumentProfile } from '@/lib/data/types';
 import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchmarks';
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
-import { drawdownTone, fitReading, volatilityTone, type Tone } from '@/lib/tone';
-import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
+import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
+import { terCostPerYear } from '@/lib/costs';
+import { fmtBig, fmtDate, fmtEur, fmtNum, fmtPct } from '@/lib/format';
 import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useFxCost, useInvestorProfile, useSimAmount } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
-import { CostBlock } from './CostBlock';
+import { CostBlock, TER_BADGE } from './CostBlock';
 import { FeeRows } from './FeeRows';
 import { effectiveFees } from '@/lib/fees';
 import { EuroVerdict, chartSeries } from './EuroVerdict';
@@ -25,6 +26,7 @@ import {
   Callout,
   Card,
   Chip,
+  Disclosure,
   InfoTip,
   SegmentedControl,
   Skeleton,
@@ -47,6 +49,7 @@ const TERMS = {
   ret: 'Guadagno o perdita medio per anno nel periodo, calcolato come se fosse stato uguale ogni anno.',
   dd: 'La discesa più ampia registrata dal valore più alto al minimo successivo. In inglese “drawdown massimo”.',
   vol: 'Quanto oscilla il prezzo nel corso di un anno. Più è alta, più ampi sono i movimenti in su e in giù.',
+  ter: 'Spese annue di gestione di un fondo o ETF, già incluse nel prezzo: non si pagano a parte.',
   bench: "Uno strumento di riferimento con cui confrontare l'andamento. Puoi sceglierne uno diverso.",
 };
 
@@ -56,7 +59,7 @@ function Section({ id, title, aside, children }: { id: string; title: string; as
   return (
     <section aria-labelledby={id} className="mt-8">
       <div className="flex items-end justify-between gap-3">
-        <h2 id={id} className="text-lg font-semibold tracking-tight">
+        <h2 id={id} className="scroll-mt-28 text-lg font-semibold tracking-tight">
           {title}
         </h2>
         {aside}
@@ -66,9 +69,9 @@ function Section({ id, title, aside, children }: { id: string; title: string; as
   );
 }
 
-function Rows({ rows }: { rows: [ReactNode, ReactNode][] }) {
+function Rows({ rows, bare }: { rows: [ReactNode, ReactNode][]; bare?: boolean }) {
   return (
-    <dl className="card divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+    <dl className={cx('divide-y divide-line', !bare && 'card overflow-hidden rounded-2xl border border-line bg-surface')}>
       {rows.map(([k, v], i) => (
         <div key={i} className="flex min-h-12 items-center justify-between gap-4 px-4 py-2.5">
           <dt className="text-muted">{k}</dt>
@@ -112,7 +115,7 @@ function Figure({
 }) {
   const na = !/\d/.test(value);
   return (
-    <div className={cx('card flex flex-col rounded-2xl border border-line bg-surface p-3.5', !na && tone !== 'neutral' && 'border-t-4', !na && { good: 'border-t-success', worry: 'border-t-warn', bad: 'border-t-error', neutral: '' }[tone])}>
+    <div className="card flex flex-col rounded-2xl border border-line bg-surface p-2.5 sm:p-3.5">
       <dt className="flex items-start justify-between gap-1 text-sm leading-snug text-muted">
         <span className="pt-0.5">{label}</span>
         {tip && (
@@ -123,18 +126,18 @@ function Figure({
       </dt>
       <dd
         className={cx(
-          'mt-auto pt-1 tabular-nums',
-          na ? 'text-base font-medium text-muted' : cx('text-[1.75rem] font-semibold leading-tight tracking-tight', TONE_TEXT[tone]),
+          'mt-auto pt-0.5 tabular-nums sm:pt-1',
+          na ? 'text-base font-medium text-muted' : cx('text-xl font-semibold leading-tight tracking-tight sm:text-[1.75rem]', TONE_TEXT[tone]),
         )}
       >
         {value}
       </dd>
       {badge && !na && (
-        <dd className="mt-1.5">
+        <dd className="mt-1 sm:mt-1.5">
           <TonePill tone={tone}>{badge}</TonePill>
         </dd>
       )}
-      {note && <dd className="mt-1 text-xs text-muted">{note}</dd>}
+      {note && <dd className="mt-0.5 text-xs text-muted sm:mt-1">{note}</dd>}
     </div>
   );
 }
@@ -263,6 +266,28 @@ export function ReportView({ symbol }: { symbol: string }) {
     [fit, report, profile],
   );
 
+  // A link such as /report/X#h-comp lands before the content exists: scroll once it has rendered,
+  // and again when the AI summary settles (it may collapse and shift the page) unless the user has scrolled since
+  const scrolledFor = useRef<string | null>(null);
+  const hashTarget = useRef<string | null>(null);
+  const scrollToHash = () => {
+    if (hashTarget.current) document.getElementById(hashTarget.current)?.scrollIntoView();
+  };
+  useEffect(() => {
+    if (!report || !profile || scrolledFor.current === symbol) return;
+    scrolledFor.current = symbol;
+    const target = decodeURIComponent(window.location.hash.slice(1));
+    if (!target) return;
+    hashTarget.current = target;
+    const stop = () => {
+      hashTarget.current = null;
+      for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown']) window.removeEventListener(ev, stop);
+    };
+    for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown']) window.addEventListener(ev, stop, { passive: true });
+    setTimeout(stop, 8000);
+    requestAnimationFrame(scrollToHash);
+  }, [report, profile, symbol]);
+
   if (!profile) return <ReportSkeleton />;
 
   function chooseBench(v: string) {
@@ -340,6 +365,14 @@ export function ReportView({ symbol }: { symbol: string }) {
   const benchTer = benchOk?.profile.ter ?? (benchOk ? findBenchmark(benchOk.profile.symbol)?.ter : undefined);
   const retTone = signTone(best.value);
 
+  const terCost = terCostPerYear(simAmount, ins.ter);
+  const terT = terTone(ins.ter);
+  const refName = benchOk ? (findBenchmark(benchOk.profile.symbol)?.label ?? benchOk.profile.name) : undefined;
+  const fees = effectiveFees(ins, userFees);
+  const hasUserFees = userFees.entry !== undefined || userFees.exit !== undefined;
+  // Fees that can change the simulation stay in view: a missing one the user can enter, or a performance fee
+  const costOpen = ((!ins.entryFee || !ins.exitFee) && !hasUserFees) || !!fees.performance;
+
   const figures = [
     <Figure
       key="ret"
@@ -352,7 +385,7 @@ export function ReportView({ symbol }: { symbol: string }) {
     />,
     <Figure
       key="dd"
-      label="Perdita massima"
+      label="Perdita massima storica"
       value={fmtPct(dd?.value)}
       note={`La tua soglia: ${fmtNum(ddTol, 0)}%`}
       tip={TERMS.dd}
@@ -371,186 +404,133 @@ export function ReportView({ symbol }: { symbol: string }) {
           />,
         ]
       : []),
+    ...(isStock
+      ? []
+      : [
+          <Figure
+            key="ter"
+            label="Costo annuo (TER)"
+            value={fmtPct(ins.ter, 2)}
+            note={terCost === undefined ? undefined : `≈ ${fmtEur(terCost)} l'anno su ${fmtEur(simAmount)}`}
+            tip={TERMS.ter}
+            tone={terT}
+            badge={TER_BADGE[terT]}
+          />,
+        ]),
+  ];
+  const figureCols = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' }[figures.length] ?? 'lg:grid-cols-4';
+
+  // The one statement that matters most: first over the profile, else to watch, else fine
+  const tones = readings.map((r) => r.tone);
+  const worstIdx = (['bad', 'worry', 'good'] as Tone[]).map((t) => tones.indexOf(t)).find((i) => i >= 0) ?? -1;
+  const worst = worstIdx >= 0 ? fit[worstIdx] : undefined;
+
+  const meta = [
+    ins.currency,
+    ins.exchange && exchangeLabel(ins.exchange),
+    ins.sector && sectorLabel(ins.sector),
+    ins.symbol,
+    ins.isin && `ISIN ${ins.isin}`,
+    m.historyEnd && `dati al ${fmtDate(m.historyEnd)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const showComp = (ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1;
+  const jump = [
+    { href: '#h-bench', label: 'Andamento' },
+    { href: '#h-euro', label: 'Simulazione' },
+    { href: '#h-fit', label: 'Profilo' },
+    ...(isStock ? [] : [{ href: '#h-cost', label: 'Costi' }]),
+    ...(showComp ? [{ href: '#h-comp', label: 'Composizione' }] : []),
   ];
 
   return (
     <div className="rise">
       {back}
+      <JumpNav items={jump} />
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-x-10">
         <div className="lg:col-start-1">
-          <header>
-            <h1 className="text-xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <Chip tone="accent">{typeLabel(ins.type)}</Chip>
-              {ins.currency && <Chip>{ins.currency}</Chip>}
-              {ins.exchange && <Chip>{exchangeLabel(ins.exchange)}</Chip>}
-              {ins.sector && <Chip>{sectorLabel(ins.sector)}</Chip>}
-              {nameTags(ins.name).map((t) => (
-                <Chip key={t} tone={t === 'Strategia con opzioni' ? 'warn' : 'bad'}>
-                  {t}
-                </Chip>
-              ))}
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <Chip tone="accent">{typeLabel(ins.type)}</Chip>
+                {nameTags(ins.name).map((t) => (
+                  <Chip key={t} tone={t === 'Strategia con opzioni' ? 'warn' : 'bad'}>
+                    {t}
+                  </Chip>
+                ))}
+              </div>
+              <p className="mt-2 text-sm text-muted">{meta}</p>
             </div>
-            <p className="mt-2 text-sm text-muted">
-              {ins.symbol}
-              {ins.isin ? ` · ISIN ${ins.isin}` : ''}
-              {m.historyEnd ? ` · dati al ${fmtDate(m.historyEnd)}` : ''}
-            </p>
+            <div className="sm:w-72 sm:shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted">Dettaglio</span>
+                <div className="min-w-0 flex-1">
+                  <SegmentedControl
+                    compact
+                    label="Livello di dettaglio"
+                    value={level}
+                    onChange={(v) => {
+                      setLevelOverride(v);
+                      setBenchMsg(undefined);
+                    }}
+                    options={[
+                      { value: 'base', label: 'Base' },
+                      { value: 'intermedio', label: 'Intermedio' },
+                      { value: 'avanzato', label: 'Avanzato' },
+                    ]}
+                  />
+                </div>
+              </div>
+              {levelOverride && levelOverride !== profile.knowledge && (
+                <p className="mt-1.5 text-xs text-muted">Solo per questa pagina. Il livello predefinito si cambia dal Profilo.</p>
+              )}
+            </div>
           </header>
 
-          <EuroVerdict
-            amount={simAmount}
-            onAmount={setSimAmount}
-            fxCost={fxCost}
-            onFxCost={setFxCost}
-            fxCostIsUser={fxCostIsUser}
-            taxCountry={profile.taxCountry}
-            fund={{
-              // without a reference there is no common period: fall back to the monthly closes
-              prices: fundSeries,
-              fees: effectiveFees(ins, userFees),
-              ter: isStock ? undefined : ins.ter,
-              currency: ins.currency,
-              distribution: ins.distribution,
-              dist: report.dist?.instrument,
-              fx: report.fx?.instrument,
-              type: ins.type,
-              assetClass: ins.assetClass,
-              govtShare: findBenchmark(ins.symbol)?.govtShare,
-            }}
-            reference={
-              benchOk && !sameAsBench && report.chart.length > 0
-                ? { prices: benchSeries, fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
-                : undefined
-            }
-            referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
-          />
-
-          <div className="mt-5">
-            <SegmentedControl
-              label="Livello di dettaglio"
-              value={level}
-              onChange={(v) => {
-                setLevelOverride(v);
-                setBenchMsg(undefined);
-              }}
-              options={[
-                { value: 'base', label: 'Base' },
-                { value: 'intermedio', label: 'Intermedio' },
-                { value: 'avanzato', label: 'Avanzato' },
-              ]}
-            />
-            {levelOverride && levelOverride !== profile.knowledge && (
-              <p className="mt-1.5 text-xs text-muted">Solo per questa pagina. Il livello predefinito si cambia dal Profilo.</p>
-            )}
-          </div>
-
-          <CostBlock
-            fundTer={ins.ter}
-            benchTer={benchTer}
-            amount={simAmount}
-            isStock={isStock}
-            benchLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
-            fundExtra={
-              isStock ? undefined : (
-                <FeeRows
-                  fees={effectiveFees(ins, userFees)}
-                  dataMissing={{ entry: !ins.entryFee, exit: !ins.exitFee }}
-                  userFees={userFees}
-                  onUserFees={setUserFees}
-                />
-              )
-            }
-            benchExtra={benchOk ? <FeeRows fees={effectiveFees(benchOk.profile)} /> : undefined}
-          />
-
-          <Section id="h-bench" title="Confronto con un riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
-            <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
-            {noPresets && (
-              <p className="mt-3 text-sm text-muted">Tipo di strumento non riconosciuto: scegli tu il riferimento</p>
-            )}
-            {!noPresets && (
-              <div role="radiogroup" aria-label="Riferimento" className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {shownPresets.map((p) => {
-                  const on = p.symbol.toUpperCase() === activeBench.toUpperCase();
-                  return (
-                    <button
-                      key={p.symbol}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      onClick={() => chooseBench(p.symbol)}
-                      className={cx(
-                        'pressable flex min-h-14 flex-col items-start justify-center rounded-xl border px-3 py-2 text-left',
-                        on ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-line-strong',
-                      )}
-                    >
-                      <span className={cx('text-sm font-semibold', on && 'text-accent')}>{p.label}</span>
-                      <span className="text-xs text-muted">{p.name}</span>
-                      <span className="text-xs text-muted">
-                        {p.symbol} · <span className="text-[11px]">{p.isin}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-                {activeBench && !benchPreset && (
-                  <span
-                    role="radio"
-                    aria-checked="true"
-                    className="flex min-h-14 flex-col items-start justify-center rounded-xl border border-accent bg-accent-soft px-3 py-2 sm:col-span-2"
-                  >
-                    <span className="text-sm font-semibold text-accent">Personalizzato</span>
-                    <span className="text-xs text-muted">{activeBench}</span>
-                  </span>
-                )}
+          <section aria-labelledby="h-brief" className="card mt-6 scroll-mt-28 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+            <h2 id="h-brief" className="text-lg font-semibold tracking-tight">
+              In breve
+            </h2>
+            {worst && (
+              <div className="mt-2">
+                <FitTally tones={tones} />
+                <p className="mt-2 text-[0.9375rem] leading-6">
+                  <ToneText text={worst.text} rules={fitRules(worst, tones[worstIdx])} />{' '}
+                  <a href="#h-fit" className="whitespace-nowrap font-medium text-accent underline underline-offset-2">
+                    Vedi tutti i punti
+                  </a>
+                </p>
               </div>
             )}
-            {noPresets && activeBench && (
-              <p className="mt-2 text-sm text-muted">
-                Riferimento scelto: <span className="font-semibold text-ink">{findBenchmark(activeBench)?.label ?? activeBench}</span>
+            <dl className={cx('mt-3 grid grid-cols-2 gap-2', figureCols, '[&>*:last-child:nth-child(odd)]:max-lg:col-span-2')}>{figures}</dl>
+            {(refName || needsChoice) && (
+              <p className="mt-3 text-sm text-muted">
+                {sameAsBench ? (
+                  'Nessun confronto: lo strumento coincide con il riferimento scelto'
+                ) : refName ? (
+                  <>
+                    Confrontato con: <span className="font-medium text-ink">{refName}</span>
+                    {benchOk ? ` (${benchOk.profile.symbol})` : ''}
+                  </>
+                ) : (
+                  'Nessun riferimento scelto'
+                )}{' '}
+                ·{' '}
+                <a href="#h-pick" className="font-medium text-accent underline underline-offset-2">
+                  Cambia
+                </a>
               </p>
             )}
-            {hasOptional && (
-              <label className="mt-2 flex min-h-11 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={showOptional || optionalActive}
-                  disabled={optionalActive}
-                  onChange={(e) => setShowOptional(e.target.checked)}
-                  className="h-4 w-4 accent-[var(--accent)]"
-                />
-                Mostra anche S&amp;P 500
-              </label>
-            )}
-            <form onSubmit={submitCustom} className="mt-2 flex gap-2">
-              <label htmlFor="bench" className="sr-only">
-                Altro ticker di riferimento
-              </label>
-              <input
-                id="bench"
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                maxLength={20}
-                placeholder="Altro ticker, es. CSPX.L"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                enterKeyHint="go"
-                aria-describedby={benchMsg ? 'bench-msg' : undefined}
-                className="h-11 min-w-0 flex-1 rounded-xl border border-line-strong/60 bg-surface px-3 text-base focus:border-accent"
-              />
-              <Button type="submit" variant="secondary" className="min-h-11 px-4 text-sm" disabled={!custom.trim()}>
-                Confronta
-              </Button>
-            </form>
-            {benchMsg && (
-              <Callout tone="worry" role="status" className="mt-2">
-                <p id="bench-msg">{benchMsg}</p>
-              </Callout>
-            )}
+          </section>
 
+          <AiSummary report={report} fit={fit} level={level} onSettle={scrollToHash} />
+
+          <Section id="h-bench" title="Andamento rispetto al riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
+            <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
             {report.classNote && (
               <Callout tone="accent" className="mt-3">
                 {report.classNote}
@@ -583,34 +563,164 @@ export function ReportView({ symbol }: { symbol: string }) {
                   ) : (
                     <p className="mt-4 text-muted">Grafico: {NA}</p>
                   )}
+                  {rank >= 1 && <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />}
                 </>
               )}
             </div>
+
+            <Disclosure
+              id="h-pick"
+              variant="sub"
+              title="Cambia riferimento"
+              preview={sameAsBench ? 'Lo strumento stesso: scegline un altro' : benchOk ? `${refName} (${benchOk.profile.symbol})` : 'Scegli un riferimento'}
+              forceOpen={needsChoice || !benchOk || !!benchMsg}
+              className="mt-4"
+            >
+              {noPresets && <p className="text-sm text-muted">Tipo di strumento non riconosciuto: scegli tu il riferimento</p>}
+              {!noPresets && (
+                <div role="radiogroup" aria-label="Riferimento" className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2">
+                  {shownPresets.map((p) => {
+                    const on = p.symbol.toUpperCase() === activeBench.toUpperCase();
+                    return (
+                      <button
+                        key={p.symbol}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => chooseBench(p.symbol)}
+                        className={cx(
+                          'pressable flex min-h-11 flex-col items-start justify-center rounded-xl border px-3 py-1.5 text-left sm:min-h-14 sm:py-2',
+                          on ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-line-strong',
+                        )}
+                      >
+                        <span className={cx('text-sm font-semibold', on && 'text-accent')}>
+                          {p.label}
+                          <span className="font-normal text-muted sm:hidden"> · {p.symbol}</span>
+                        </span>
+                        <span className={cx('text-xs text-muted', !on && 'max-sm:hidden')}>{p.name}</span>
+                        <span className={cx('text-xs text-muted', !on && 'max-sm:hidden')}>
+                          <span className="max-sm:hidden">{p.symbol} · </span>
+                          <span className="text-[11px]">{p.isin}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {activeBench && !benchPreset && (
+                    <span
+                      role="radio"
+                      aria-checked="true"
+                      className="flex min-h-11 flex-col items-start justify-center rounded-xl border border-accent bg-accent-soft px-3 py-2 sm:col-span-2"
+                    >
+                      <span className="text-sm font-semibold text-accent">Personalizzato</span>
+                      <span className="text-xs text-muted">{activeBench}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+              {noPresets && activeBench && (
+                <p className="mt-2 text-sm text-muted">
+                  Riferimento scelto: <span className="font-semibold text-ink">{findBenchmark(activeBench)?.label ?? activeBench}</span>
+                </p>
+              )}
+              {hasOptional && (
+                <label className="mt-2 flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={showOptional || optionalActive}
+                    disabled={optionalActive}
+                    onChange={(e) => setShowOptional(e.target.checked)}
+                    className="h-4 w-4 accent-[var(--accent)]"
+                  />
+                  Mostra anche S&amp;P 500
+                </label>
+              )}
+              <form onSubmit={submitCustom} className="mt-2 flex gap-2">
+                <label htmlFor="bench" className="sr-only">
+                  Altro ticker di riferimento
+                </label>
+                <input
+                  id="bench"
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  maxLength={20}
+                  placeholder="Altro ticker, es. CSPX.L"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  enterKeyHint="go"
+                  aria-describedby={benchMsg ? 'bench-msg' : undefined}
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-line-strong/60 bg-surface px-3 text-base focus:border-accent"
+                />
+                <Button type="submit" variant="secondary" className="min-h-11 px-4 text-sm" disabled={!custom.trim()}>
+                  Confronta
+                </Button>
+              </form>
+              {benchMsg && (
+                <Callout tone="worry" role="status" className="mt-2">
+                  <p id="bench-msg">{benchMsg}</p>
+                </Callout>
+              )}
+            </Disclosure>
           </Section>
 
+          <EuroVerdict
+            amount={simAmount}
+            onAmount={setSimAmount}
+            fxCost={fxCost}
+            onFxCost={setFxCost}
+            fxCostIsUser={fxCostIsUser}
+            taxCountry={profile.taxCountry}
+            fund={{
+              // without a reference there is no common period: fall back to the monthly closes
+              prices: fundSeries,
+              fees,
+              ter: isStock ? undefined : ins.ter,
+              currency: ins.currency,
+              distribution: ins.distribution,
+              dist: report.dist?.instrument,
+              fx: report.fx?.instrument,
+              type: ins.type,
+              assetClass: ins.assetClass,
+              govtShare: findBenchmark(ins.symbol)?.govtShare,
+            }}
+            reference={
+              benchOk && !sameAsBench && report.chart.length > 0
+                ? { prices: benchSeries, fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
+                : undefined
+            }
+            referenceLabel={benchOk && !sameAsBench ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+            referenceNote={sameAsBench ? 'Il riferimento scelto è lo strumento stesso: scegli un altro riferimento per vedere il confronto.' : undefined}
+          />
         </div>
 
-        <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:[&_section]:mt-0">
-          <div className="lg:sticky lg:top-20">
-            <Section
-              id="h-fit"
-              title="Rispetto al tuo profilo"
-              aside={
+        <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:-m-1 lg:p-1">
+            <Disclosure id="h-fit" title="Rispetto al tuo profilo" preview={tones.length > 0 ? <FitTally tones={tones} /> : undefined} openOnDesktop className="lg:mt-0">
+              <div className="-mt-1 mb-3 flex flex-wrap items-center justify-between gap-x-3">
+                <p className="text-sm text-muted">
+                  Soglia di perdita {fmtNum(profile.maxDrawdownPct, 0)}% · orizzonte {profile.horizonYears} {profile.horizonYears === 1 ? 'anno' : 'anni'}
+                </p>
                 <Link
                   href="/profilo"
                   className="pressable -mr-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft"
                 >
                   Modifica profilo
                 </Link>
-              }
-            >
-              <p className="-mt-1 mb-3 text-sm text-muted">
-                Soglia di perdita {fmtNum(profile.maxDrawdownPct, 0)}% · orizzonte {profile.horizonYears} {profile.horizonYears === 1 ? 'anno' : 'anni'}
-              </p>
-              <FitTally tones={readings.map((r) => r.tone)} />
+              </div>
               <ul className="space-y-2">
                 {fit.map((f, i) => {
                   const r = readings[i] ?? { tone: 'neutral' as Tone };
+                  if (r.tone === 'neutral' && !r.label)
+                    return (
+                      <li key={f.id} className="px-1 text-sm text-muted">
+                        <p className="flex gap-2">
+                          <ToneIcon tone="neutral" className="mt-0.5" />
+                          <span>{f.text}</span>
+                        </p>
+                        {f.id === 'rolling' && <RollingHelp />}
+                      </li>
+                    );
                   return (
                     <li key={f.id} className={cx('card rounded-2xl border border-line bg-surface p-4', toneEdge(r.tone))}>
                       {r.label && (
@@ -621,47 +731,52 @@ export function ReportView({ symbol }: { symbol: string }) {
                       <p className="text-[0.9375rem] leading-6">
                         <ToneText text={f.text} rules={fitRules(f, r.tone)} />
                       </p>
+                      {f.id === 'rolling' && <RollingHelp />}
                     </li>
                   );
                 })}
               </ul>
-              {fit.some((f) => f.id === 'rolling') && (
-                <details className="mt-2 rounded-xl px-1 text-sm">
-                  <summary className="pressable inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 font-medium text-accent hover:bg-accent-soft">
-                    Cosa sono le finestre mobili?
-                  </summary>
-                  <p className="mt-1 px-2 text-muted">
-                    Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di partenza) e si calcola il
-                    rendimento annuo di ciascuno. Il risultato mostra il periodo con il rendimento più basso e quello con il più alto.
-                  </p>
-                </details>
-              )}
-            </Section>
+            </Disclosure>
           </div>
         </aside>
 
         <div className="lg:col-start-1">
-          <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 3 && 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
-            {figures}
-          </dl>
-
-          {!isStock && (
-            <SimilarProducts symbol={symbol} assetClass={insClass} volatility={report.metrics.volatility} prices={fundSeries} amount={simAmount} />
-          )}
-
-          <AiSummary report={report} fit={fit} level={level} />
-
-          {benchOk && !sameAsBench && rank >= 1 && (
-            <Section id="h-cmp" title="Confronto con il riferimento">
-              <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
-                <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />
-              </div>
-            </Section>
+          {isStock ? (
+            <p className="mt-8 text-sm text-muted">
+              <span className="font-medium text-ink">Costi:</span> nessun TER (le azioni non hanno spese correnti). Commissioni del broker non incluse.
+              {benchTer !== undefined && ` Il riferimento ha un TER di ${fmtPct(benchTer, 2)}.`}
+            </p>
+          ) : (
+            <CostBlock
+              key={symbol}
+              fundTer={ins.ter}
+              benchTer={benchTer}
+              amount={simAmount}
+              fees={fees}
+              benchLabel={refName}
+              defaultOpen={costOpen}
+              fundExtra={
+                <FeeRows fees={fees} dataMissing={{ entry: !ins.entryFee, exit: !ins.exitFee }} userFees={userFees} onUserFees={setUserFees} />
+              }
+              benchExtra={benchOk ? <FeeRows fees={effectiveFees(benchOk.profile)} /> : undefined}
+            />
           )}
 
           {rank >= 1 && (!benchOk || sameAsBench || rank >= 2) && (
-            <Section id="h-perf" title={rank >= 2 ? 'Dettagli di calcolo' : 'Rendimenti per periodo'}>
+            <Disclosure
+              key={`perf-${symbol}`}
+              id="h-perf"
+              title={rank >= 2 ? 'Dettagli di calcolo' : 'Rendimenti per periodo'}
+              preview={
+                rank >= 2
+                  ? m.historyStart
+                    ? `Storico disponibile ${fmtDate(m.historyStart)} – ${fmtDate(m.historyEnd)}`
+                    : undefined
+                  : `1 anno ${fmtPct(m.return1y)} · 3 anni ${fmtPct(m.return3y)} · 5 anni ${fmtPct(m.return5y)}`
+              }
+            >
               <Rows
+                bare
                 rows={[
                   // With a working comparison, returns per period are already in the comparison table.
                   ...((!benchOk || sameAsBench
@@ -683,19 +798,35 @@ export function ReportView({ symbol }: { symbol: string }) {
                     : []),
                 ]}
               />
-            </Section>
+            </Disclosure>
           )}
 
-          {(ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1 && (
-            <Section id="h-comp" title="Composizione">
+          {showComp && (
+            <Disclosure key={`comp-${symbol}`} id="h-comp" title="Composizione" preview={compositionPreview(ins)}>
               <Composition ins={ins} full={rank >= 2} />
-            </Section>
+            </Disclosure>
           )}
 
           {ins.type === 'STOCK' && rank >= 1 && (
-            <Section id="h-fond" title="Bilancio (ultimo esercizio)">
+            <Disclosure
+              key={`fond-${symbol}`}
+              id="h-fond"
+              title="Bilancio (ultimo esercizio)"
+              preview={
+                ins.fundamentals
+                  ? [
+                      `Ricavi ${fmtBig(ins.fundamentals.revenue, ins.fundamentals.currency)}`,
+                      `Utile netto ${fmtBig(ins.fundamentals.netIncome, ins.fundamentals.currency)}`,
+                      ins.fundamentals.fiscalYear ? `FY${ins.fundamentals.fiscalYear}` : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : undefined
+              }
+            >
               {ins.fundamentals ? (
                 <Rows
+                  bare
                   rows={[
                     ['Ricavi', fmtBig(ins.fundamentals.revenue, ins.fundamentals.currency)],
                     ['Utile netto', <SignedBig key="ni" v={ins.fundamentals.netIncome} currency={ins.fundamentals.currency} />],
@@ -707,31 +838,28 @@ export function ReportView({ symbol }: { symbol: string }) {
               ) : (
                 <p className="text-muted">{NA}</p>
               )}
-            </Section>
+            </Disclosure>
           )}
 
           {rank >= 2 && report.notes.length > 0 && (
-            <Section id="h-note" title="Note di calcolo">
+            <Disclosure id="h-note" title="Note di calcolo" preview={`${report.notes.length} ${report.notes.length === 1 ? 'nota' : 'note'}`}>
               <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                 {report.notes.map((n) => (
                   <li key={n}>{n}</li>
                 ))}
               </ul>
-            </Section>
+            </Disclosure>
           )}
 
-          {rank < 2 && (
-            <p className="mt-8 text-sm text-muted">
-              Vuoi più dati? Passa {rank === 0 ? 'a' : 'ad'}{' '}
-              <button
-                type="button"
-                onClick={() => setLevelOverride(rank === 0 ? 'intermedio' : 'avanzato')}
-                className="font-medium text-accent underline underline-offset-2"
-              >
-                {rank === 0 ? 'Intermedio' : 'Avanzato'}
-              </button>
-              .
-            </p>
+          {!isStock && (
+            <SimilarProducts
+              symbol={symbol}
+              assetClass={insClass}
+              volatility={report.metrics.volatility}
+              prices={fundSeries}
+              amount={simAmount}
+              referenceSymbol={benchOk?.profile.symbol}
+            />
           )}
 
           <div className="mt-8 border-t border-line pt-6">
@@ -745,6 +873,75 @@ export function ReportView({ symbol }: { symbol: string }) {
   );
 }
 
+/** Quick-jump chips for phones, shown once the "In breve" card has scrolled out of view. */
+function JumpNav({ items }: { items: { href: string; label: string }[] }) {
+  const [show, setShow] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
+  // Fade the edge(s) where more chips are hidden, so the row reads as scrollable
+  const [edges, setEdges] = useState({ start: false, end: false });
+  const measure = () => {
+    const el = listRef.current;
+    if (el) setEdges({ start: el.scrollLeft > 4, end: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+  };
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [show]);
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 420);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return (
+    <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 h-0 lg:hidden">
+      <nav
+        aria-label="Sezioni del report"
+        className={cx('absolute -inset-x-4 top-0 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:-inset-x-6 sm:px-6', !show && 'hidden')}
+      >
+        <ul
+          ref={listRef}
+          onScroll={measure}
+          className="flex gap-0.5 overflow-x-auto py-1"
+          style={{
+            maskImage: `linear-gradient(to right, ${edges.start ? 'transparent, #000 1.5rem' : '#000, #000'}, ${edges.end ? '#000 calc(100% - 1.5rem), transparent' : '#000, #000'})`,
+          }}
+        >
+          {items.map((it) => (
+            <li key={it.href} className="shrink-0">
+              <a href={it.href} className="pressable inline-flex min-h-11 items-center rounded-full px-2.5 text-sm font-medium text-accent hover:bg-accent-soft">
+                {it.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  );
+}
+
+function RollingHelp() {
+  return (
+    <details className="mt-1 text-sm">
+      <summary className="pressable inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 font-medium text-accent hover:bg-accent-soft">
+        Come leggo questo punto?
+      </summary>
+      <p className="mt-1 px-2 text-muted">
+        Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di partenza) e si calcola il rendimento
+        annuo di ciascuno. Il risultato mostra il periodo con il rendimento più basso e quello con il più alto.
+      </p>
+    </details>
+  );
+}
+
+/** One line for the collapsed "Composizione": the biggest weights of whatever breakdown exists. */
+function compositionPreview(ins: InstrumentProfile): string | undefined {
+  const top = (label: string, xs: { name: string; weight: number }[] | undefined) =>
+    xs && xs.length > 0 ? `${label}: ${xs.slice(0, 3).map((x) => `${x.name} ${fmtPct(x.weight)}`).join(', ')}${xs.length > 3 ? '…' : ''}` : undefined;
+  return top('Principali posizioni', ins.holdings) ?? top('Settori', ins.sectors) ?? top('Paesi', ins.countries?.map((c) => ({ name: countryLabel(c.name), weight: c.weight })));
+}
+
 function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: InstrumentProfile; bm: Metrics }) {
   // [label, a, b, higher is better, color by sign]
   const rows: [string, number | undefined, number | undefined, boolean, boolean][] = [
@@ -754,9 +951,6 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
     ['Volatilità annua', am.volatility, bm.volatility, false, false],
     ['Perdita massima storica', am.maxDrawdown?.value, bm.maxDrawdown?.value, true, true],
   ];
-  const isinCell = (p: InstrumentProfile) => (
-    <td className="py-2.5 pr-3 text-right text-[11px] text-muted">{p.isin ?? 'Dato non disponibile'}</td>
-  );
   return (
     <table className="card mt-4 w-full table-fixed overflow-hidden rounded-2xl border border-line bg-surface text-left">
       <caption className="sr-only">
@@ -787,13 +981,6 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
         </tr>
       </thead>
       <tbody className="divide-y divide-line">
-        <tr>
-          <th scope="row" className="px-4 py-2.5 text-sm font-normal text-muted">
-            ISIN
-          </th>
-          {isinCell(a)}
-          {isinCell(b)}
-        </tr>
         {rows.map(([k, x, y, higherBetter, signed]) => {
           const both = x !== undefined && y !== undefined && x !== y;
           const aWins = both && (higherBetter ? x > y : x < y);
@@ -842,13 +1029,13 @@ function FitTally({ tones }: { tones: Tone[] }) {
   const shown = items.filter(([, c]) => c > 0);
   if (!shown.length) return null;
   return (
-    <div className="mb-3 flex flex-wrap gap-1.5">
+    <span className="flex flex-wrap gap-1.5">
       {shown.map(([t, c, label]) => (
         <TonePill key={t} tone={t}>
           {c} {label}
         </TonePill>
       ))}
-    </div>
+    </span>
   );
 }
 
@@ -879,7 +1066,7 @@ const BAR_COLORS = ['var(--bar-1)', 'var(--bar-2)', 'var(--bar-3)', 'var(--bar-4
 function AllocList({ title, items }: { title: string; items: { key: string; name: string; weight: number }[] }) {
   return (
     <div>
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">{title}</h3>
+      <h3 className="text-sm font-semibold">{title}</h3>
       <ul className="mt-2 space-y-2.5">
         {items.map((h, i) => (
           <li key={h.key}>
@@ -909,7 +1096,7 @@ function Composition({ ins, full }: { ins: InstrumentProfile; full: boolean }) {
   return (
     <div className="space-y-4">
       {(holdings || sectors || (full && ins.countries)) && (
-        <Card className="space-y-6">
+        <div className="space-y-6">
           {holdings && (
             <AllocList
               title={full ? 'Principali posizioni' : 'Prime 5 posizioni'}
@@ -920,9 +1107,9 @@ function Composition({ ins, full }: { ins: InstrumentProfile; full: boolean }) {
           {full && ins.countries && (
             <AllocList title="Paesi" items={ins.countries.map((c) => ({ key: c.name, name: countryLabel(c.name), weight: c.weight }))} />
           )}
-        </Card>
+        </div>
       )}
-      {facts.length > 0 && <Rows rows={facts} />}
+      {facts.length > 0 && <Rows bare rows={facts} />}
     </div>
   );
 }
