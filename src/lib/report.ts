@@ -1,12 +1,14 @@
 import { cached, TTL_PRICES, TTL_PROFILE } from './cache';
-import { defaultBenchmarkFor, findBenchmark } from './benchmarks';
+import { BENCHMARKS, defaultBenchmarkFor, findBenchmark } from './benchmarks';
 import { applyCostOverrides } from './data/costOverrides';
 import { yahooProvider } from './data/yahoo';
 import type { DataProvider } from './data/provider';
 import { detectDistribution } from './distribution';
+import { growthRatio, similarProducts, type FundPeriods, type SimilarItem } from './similar';
 import type { AssetClass, DividendEvent, InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
 import {
   annualizedReturn,
+  annualizedVolatility,
   annualizedVolatilityDetail,
   maxDrawdown,
   monthlyCloses,
@@ -178,4 +180,42 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
     classNote,
     generatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Curated products of the instrument's class with the closest volatility, plus their growth ratio over the fund's periods.
+ * Histories come through the shared cache and load in parallel; a failed candidate is skipped.
+ */
+export async function buildSimilar(symbol: string, periods: FundPeriods): Promise<SimilarItem[]> {
+  const [instrument, prices] = await Promise.all([profileOf(symbol), historyOf(symbol)]);
+  const cls = instrument.assetClass;
+  if (!cls || cls === 'unknown' || cls === 'other') return [];
+  const vol = annualizedVolatility(prices);
+  if (vol === undefined) return [];
+  const loaded = await Promise.all(
+    BENCHMARKS.filter((b) => b.assetClass === cls).map(async (benchmark) => {
+      try {
+        const [profile, history] = await Promise.all([profileOf(benchmark.symbol), historyOf(benchmark.symbol)]);
+        return { benchmark, profile, history, vol: annualizedVolatility(history) };
+      } catch {
+        return undefined;
+      }
+    }),
+  );
+  const ok = loaded.filter((c): c is NonNullable<typeof c> => !!c);
+  const picked = similarProducts(cls, vol, ok, undefined, { symbol: instrument.symbol, isin: instrument.isin });
+  return picked.map(({ benchmark, vol: v }) => {
+    const c = ok.find((x) => x.benchmark === benchmark)!;
+    return {
+      symbol: benchmark.symbol,
+      isin: benchmark.isin,
+      name: benchmark.name,
+      ter: c.profile.ter ?? benchmark.ter,
+      vol: v,
+      distribution: c.profile.distribution ?? benchmark.distribution,
+      entryFee: c.profile.entryFee?.value,
+      exitFee: c.profile.exitFee?.value,
+      growth: { full: growthRatio(c.history, periods.full), year: growthRatio(c.history, periods.year) },
+    };
+  });
 }

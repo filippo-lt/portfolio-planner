@@ -63,6 +63,22 @@ export function lastYearStart(prices: PricePoint[]): string | undefined {
   return last ? new Date(toMs(last.date) - 365 * DAY).toISOString().slice(0, 10) : undefined;
 }
 
+const feeOrUndefined = (f: number | undefined) => (f !== undefined && Number.isFinite(f) && f >= 0 ? f : undefined);
+
+/**
+ * Growth by a price ratio (end/start): the entry fee reduces what is invested, the exit fee applies to the final value.
+ * The one place this arithmetic lives; `simulate` and the similar-products rows both use it.
+ */
+export function applyGrowth(amount: number, ratio: number, entryFee?: number, exitFee?: number) {
+  const entry = feeOrUndefined(entryFee);
+  const exit = feeOrUndefined(exitFee);
+  const entryFeeEur = amount * (entry ?? 0);
+  const grossValue = (amount - entryFeeEur) * ratio;
+  const exitFeeEur = grossValue * (exit ?? 0);
+  const netValue = grossValue - exitFeeEur;
+  return { entryFeeEur, grossValue, exitFeeEur, netValue, feesIncluded: { entry: entry !== undefined, exit: exit !== undefined } };
+}
+
 /**
  * Invests `amount` at the start price. The entry fee reduces what is invested; the exit fee applies to the final value.
  * The TER is NOT subtracted: adjusted prices already include it.
@@ -74,19 +90,18 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrice
   const s = from ? nearest(prices, from) : prices[0];
   const e = to ? nearest(prices, to) : prices[prices.length - 1];
   if (!(s.close > 0) || !(e.close > 0) || toMs(e.date) <= toMs(s.date)) return undefined;
-  const entry = entryFee !== undefined && Number.isFinite(entryFee) && entryFee >= 0 ? entryFee : undefined;
-  const exit = exitFee !== undefined && Number.isFinite(exitFee) && exitFee >= 0 ? exitFee : undefined;
-  const entryFeeEur = amount * (entry ?? 0);
+  const adjusted = applyGrowth(amount, e.close / s.close, entryFee, exitFee);
+  const { entryFeeEur, feesIncluded } = adjusted;
   const invested = amount - entryFeeEur;
   // Distributing: price change on the raw closes, plus the payments received in cash (ex-date after start, up to end).
   const rs = rawPrices && dividends ? rawPrices.find((p) => p.date === s.date) : undefined;
   const re = rawPrices && dividends ? rawPrices.find((p) => p.date === e.date) : undefined;
   const dist = rs && re && rs.close > 0 && re.close > 0 ? { shares: invested / rs.close, end: re.close } : undefined;
-  const grossValue = dist ? dist.shares * dist.end : (invested * e.close) / s.close;
+  const grossValue = dist ? dist.shares * dist.end : adjusted.grossValue;
   const dividendsEur = dist
     ? dist.shares * (dividends ?? []).filter((d) => d.date > s.date && d.date <= e.date).reduce((t, d) => t + d.amount, 0)
     : undefined;
-  const exitFeeEur = grossValue * (exit ?? 0);
+  const exitFeeEur = grossValue * (feeOrUndefined(exitFee) ?? 0);
   const netValue = grossValue - exitFeeEur + (dividendsEur ?? 0);
   return {
     start: s.close,
@@ -99,7 +114,7 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrice
     exitFeeEur,
     netValue,
     gainEur: netValue - amount,
-    feesIncluded: { entry: entry !== undefined, exit: exit !== undefined },
+    feesIncluded,
     ...(dist ? { dividendsEur, distribution: 'dist' as const } : {}),
   };
 }

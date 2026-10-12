@@ -16,6 +16,7 @@ import { CostBlock } from './CostBlock';
 import { FeeRows } from './FeeRows';
 import { effectiveFees } from '@/lib/fees';
 import { EuroVerdict, chartSeries } from './EuroVerdict';
+import { SimilarProducts } from './SimilarProducts';
 import { AiSummary } from './AiSummary';
 import {
   BackLink,
@@ -627,6 +628,14 @@ export function ReportView({ symbol }: { symbol: string }) {
                   : undefined
               }
               referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+            />
+
+            <SimilarProducts
+              symbol={symbol}
+              assetClass={insClass}
+              volatility={report.metrics.volatility}
+              prices={report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly}
+              amount={simAmount}
             />
 
             <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
