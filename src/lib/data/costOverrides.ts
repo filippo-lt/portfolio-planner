@@ -32,8 +32,14 @@ export function findCostOverride(p: Pick<InstrumentProfile, 'symbol' | 'isin'>):
 export function applyCostOverrides(profile: InstrumentProfile): InstrumentProfile {
   const o = findCostOverride(profile);
   if (!o) return profile;
+  // The curated TER fills in when the provider has none (same fallback as the benchmark side)
+  const sym = profile.symbol.toUpperCase();
+  const isin = profile.isin?.toUpperCase();
+  const curated = BENCHMARKS.find((b) => b.symbol.toUpperCase() === sym || (isin && b.isin?.toUpperCase() === isin));
+  const ter = profile.ter ?? curated?.ter;
   return {
     ...profile,
+    ter,
     entryFee: profile.entryFee ?? o.entryFee,
     exitFee: profile.exitFee ?? o.exitFee,
     performanceFee: profile.performanceFee ?? o.performanceFee,
