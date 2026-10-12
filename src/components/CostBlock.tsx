@@ -39,15 +39,34 @@ function Side({ title, ter, isStock, children }: { title: string; ter: number | 
   );
 }
 
-/** Cost card: fund and reference TER side by side. Further cost rows (entry/exit fees) go below the grid. */
-export function CostBlock({ fundTer, benchTer, isStock, benchLabel }: { fundTer: number | undefined; benchTer: number | undefined; isStock: boolean; benchLabel?: string }) {
+/** Cost card: fund and reference TER side by side. Entry/exit fee rows go in each side's slot. */
+export function CostBlock({
+  fundTer,
+  benchTer,
+  isStock,
+  benchLabel,
+  fundExtra,
+  benchExtra,
+}: {
+  fundTer: number | undefined;
+  benchTer: number | undefined;
+  isStock: boolean;
+  benchLabel?: string;
+  /** Extra rows under the fund / reference figures (fees) */
+  fundExtra?: ReactNode;
+  benchExtra?: ReactNode;
+}) {
   return (
     <div className="card mt-4 rounded-2xl border border-line bg-surface p-3.5">
       <h2 className="text-sm font-semibold">Costo annuo (TER)</h2>
       <p className="mt-0.5 text-xs text-muted">Spese correnti, già incluse nel prezzo.</p>
       <dl className="mt-3 grid grid-cols-2 gap-3">
-        <Side title="Questo strumento" ter={fundTer} isStock={isStock} />
-        <Side title={benchLabel ? `Riferimento · ${benchLabel}` : 'Riferimento'} ter={benchTer} />
+        <Side title="Questo strumento" ter={fundTer} isStock={isStock}>
+          {fundExtra}
+        </Side>
+        <Side title={benchLabel ? `Riferimento · ${benchLabel}` : 'Riferimento'} ter={benchTer}>
+          {benchExtra}
+        </Side>
       </dl>
     </div>
   );

@@ -3,11 +3,13 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { AssetClass, InstrumentType } from './data/types';
 import type { InvestorProfile } from './profileFit';
+import { parseUserFees, type UserFees } from './fees';
 import { validateProfile } from './profileValidation';
 import { THEME_KEY, type ThemePref } from './theme';
 
 const PROFILE_KEY = 'investorProfile';
 const BENCH_KEY = 'benchmarkSymbol';
+const FEES_KEY = 'feeOverrides';
 const VERSION = 1;
 const LOADING = '__loading__';
 
@@ -127,6 +129,43 @@ export function clearBenchmarkPref() {
   emit();
 }
 
+/** Fees the user typed for one symbol; only used when the data has none. Stored as a map keyed by upper-case symbol. */
+function readFeeMap(raw: string | null): Record<string, UserFees> {
+  if (!raw) return {};
+  try {
+    const o = JSON.parse(raw);
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return {};
+    const out: Record<string, UserFees> = {};
+    for (const [k, v] of Object.entries(o)) {
+      const fees = parseUserFees(v);
+      if (fees.entry !== undefined || fees.exit !== undefined) out[k] = fees;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function useFeeOverride(symbol: string): [UserFees, (fees: UserFees) => void] {
+  const key = symbol.toUpperCase();
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(FEES_KEY) ?? '',
+    () => '',
+  );
+  const fees = useMemo(() => readFeeMap(raw || null)[key] ?? {}, [raw, key]);
+  const set = useCallback(
+    (next: UserFees) => {
+      const { [key]: _drop, ...rest } = readFeeMap(read(FEES_KEY));
+      void _drop;
+      const clean = parseUserFees(next);
+      write(FEES_KEY, JSON.stringify(clean.entry === undefined && clean.exit === undefined ? rest : { ...rest, [key]: clean }));
+    },
+    [key],
+  );
+  return [fees, set];
+}
+
 /* Recently opened reports, newest first. */
 const RECENT_KEY = 'recentReports';
 const RECENT_MAX = 6;
@@ -189,7 +228,7 @@ export function setThemePref(p: ThemePref) {
 
 /** Wipes everything the app saved on this device except the appearance choice. */
 export function clearAllUserData() {
-  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY]) {
+  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY, FEES_KEY]) {
     try {
       localStorage.removeItem(key);
     } catch {

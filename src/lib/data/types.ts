@@ -25,6 +25,12 @@ export interface Fundamentals {
   currency?: string;
 }
 
+/** A one-off or performance fee as a fraction (0.01 = 1%) with where the number comes from. */
+export interface FeeValue {
+  value: number;
+  source: 'kid' | 'manual' | 'user';
+}
+
 export interface InstrumentProfile {
   symbol: string;
   name: string;
@@ -34,6 +40,9 @@ export interface InstrumentProfile {
   isin?: string;
   /** Ongoing charges as a fraction (0.0022 = 0.22%) */
   ter?: number;
+  entryFee?: FeeValue;
+  exitFee?: FeeValue;
+  performanceFee?: FeeValue;
   holdings?: Holding[];
   sectors?: Allocation[];
   countries?: Allocation[];

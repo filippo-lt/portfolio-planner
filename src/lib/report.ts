@@ -1,5 +1,6 @@
 import { cached, TTL_PRICES, TTL_PROFILE } from './cache';
 import { defaultBenchmarkFor, findBenchmark } from './benchmarks';
+import { applyCostOverrides } from './data/costOverrides';
 import { yahooProvider } from './data/yahoo';
 import type { DataProvider } from './data/provider';
 import type { AssetClass, InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
@@ -83,7 +84,7 @@ export function searchInstruments(q: string): Promise<SymbolCandidate[]> {
   return cached(`search:${q.trim().toUpperCase()}`, TTL_PROFILE, () => provider.resolve(q));
 }
 
-const profileOf = (s: string) => cached(`profile:${s}`, TTL_PROFILE, () => provider.getProfile(s));
+const profileOf = (s: string) => cached(`profile:${s}`, TTL_PROFILE, async () => applyCostOverrides(await provider.getProfile(s)));
 export const getInstrumentProfile = (s: string) => profileOf(s);
 const historyOf = (s: string) =>
   cached(`history:${s}:${HISTORY_YEARS}`, TTL_PRICES, () => provider.getHistory(s, HISTORY_YEARS));

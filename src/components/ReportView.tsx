@@ -9,10 +9,12 @@ import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchma
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
 import { drawdownTone, fitReading, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
-import { pushRecentReport, useBenchmarkPrefs, useInvestorProfile } from '@/lib/profileStore';
+import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useInvestorProfile } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
 import { CostBlock } from './CostBlock';
+import { FeeRows } from './FeeRows';
+import { effectiveFees } from '@/lib/fees';
 import { AiSummary } from './AiSummary';
 import {
   BackLink,
@@ -160,6 +162,7 @@ export function ReportView({ symbol }: { symbol: string }) {
   const router = useRouter();
   const profile = useInvestorProfile();
   const [benchPrefs, setBenchPref, clearBenchPref] = useBenchmarkPrefs();
+  const [userFees, setUserFees] = useFeeOverride(symbol);
   const [showOptional, setShowOptional] = useState(false);
   const [custom, setCustom] = useState('');
   const [benchMsg, setBenchMsg] = useState<string>();
@@ -408,7 +411,23 @@ export function ReportView({ symbol }: { symbol: string }) {
             )}
           </div>
 
-          <CostBlock fundTer={ins.ter} benchTer={benchTer} isStock={isStock} benchLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined} />
+          <CostBlock
+            fundTer={ins.ter}
+            benchTer={benchTer}
+            isStock={isStock}
+            benchLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+            fundExtra={
+              isStock ? undefined : (
+                <FeeRows
+                  fees={effectiveFees(ins, userFees)}
+                  dataMissing={{ entry: !ins.entryFee, exit: !ins.exitFee }}
+                  userFees={userFees}
+                  onUserFees={setUserFees}
+                />
+              )
+            }
+            benchExtra={benchOk ? <FeeRows fees={effectiveFees(benchOk.profile)} /> : undefined}
+          />
 
           <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 3 && 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
             {figures}
