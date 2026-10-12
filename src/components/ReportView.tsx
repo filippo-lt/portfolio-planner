@@ -898,7 +898,7 @@ function JumpNav({ items }: { items: { href: string; label: string }[] }) {
     <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 h-0 lg:hidden">
       <nav
         aria-label="Sezioni del report"
-        className={cx('absolute -inset-x-4 top-0 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:-inset-x-6 sm:px-6', !show && 'hidden')}
+        className={cx('absolute -inset-x-4 top-0 border-b border-line bg-bg/95 px-4 sm:-inset-x-6 sm:px-6', !show && 'hidden')}
       >
         <ul
           ref={listRef}

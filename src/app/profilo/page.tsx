@@ -367,7 +367,7 @@ function Onboarding() {
             I dati restano solo su questo dispositivo.
           </p>
         </div>
-        <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/85 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-md sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+        <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
           <Button block onClick={() => setStep(0)}>
             Inizia
           </Button>
@@ -459,7 +459,7 @@ function Onboarding() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/85 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-md sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+      <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
         {s.fields.some((k) => errors[k]) && (
           <p role="alert" className="mb-2 text-center text-sm font-medium text-error">
             Completa i campi evidenziati per continuare.
@@ -561,7 +561,7 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
         </Card>
       </div>
 
-      <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] -mx-4 mt-6 border-t border-line bg-bg/85 px-4 py-3 backdrop-blur-md empty:hidden sm:bottom-0 sm:mx-0 sm:rounded-2xl sm:border sm:px-3">
+      <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] -mx-4 mt-6 border-t border-line bg-bg/95 px-4 py-3 empty:hidden sm:bg-bg/85 sm:backdrop-blur-md sm:bottom-0 sm:mx-0 sm:rounded-2xl sm:border sm:px-3">
         {!dirty && !showSaved ? null : showSaved ? (
           <div role="status" className="rise flex items-center gap-3 rounded-xl border border-success-line bg-success-soft p-2 pl-4">
             <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 shrink-0 text-success">
