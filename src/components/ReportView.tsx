@@ -9,7 +9,7 @@ import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchma
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
 import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
-import { clearBenchmarkPref, pushRecentReport, useBenchmarkPref, useInvestorProfile } from '@/lib/profileStore';
+import { pushRecentReport, useBenchmarkPrefs, useInvestorProfile } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
 import { AiSummary } from './AiSummary';
@@ -158,9 +158,7 @@ function ReportSkeleton() {
 export function ReportView({ symbol }: { symbol: string }) {
   const router = useRouter();
   const profile = useInvestorProfile();
-  const [benchPref, setBenchPref] = useBenchmarkPref();
-  const bench = benchPref?.symbol ?? '';
-  const benchPrefClass = benchPref?.assetClass;
+  const [benchPrefs, setBenchPref, clearBenchPref] = useBenchmarkPrefs();
   const [showOptional, setShowOptional] = useState(false);
   const [custom, setCustom] = useState('');
   const [benchMsg, setBenchMsg] = useState<string>();
@@ -173,6 +171,11 @@ export function ReportView({ symbol }: { symbol: string }) {
     if (profile === null) router.replace('/profilo');
   }, [profile, router]);
 
+  // The class is known once a report for this symbol has loaded; until then ask for no benchmark
+  // and let the server pick the class default.
+  const knownClass: AssetClass | undefined =
+    fetched?.symbol === symbol ? (fetched.report?.instrument.assetClass ?? (fetched.report ? 'unknown' : undefined)) : undefined;
+  const bench = (knownClass && benchPrefs[knownClass]) || '';
   const key = `${symbol}|${bench}|${reloadTick}`;
   useEffect(() => {
     let cancelled = false;
@@ -186,11 +189,6 @@ export function ReportView({ symbol }: { symbol: string }) {
         }
         const rep = j as Report;
         const cls = rep.instrument.assetClass ?? 'unknown';
-        if (bench && benchPrefClass !== cls) {
-          // A reference saved for another kind of instrument does not apply: drop it and reload with the class default.
-          clearBenchmarkPref();
-          return;
-        }
         if ('error' in rep.benchmark) {
           // Never leave the user with a broken comparison: fall back to the last working benchmark.
           const def = defaultBenchmarkFor(cls);
@@ -198,8 +196,8 @@ export function ReportView({ symbol }: { symbol: string }) {
           const fallback = bench ? (good ?? (bench !== def ? (def ?? null) : null)) : null;
           if (fallback && fallback !== bench) {
             setBenchMsg(`${bench}: dati non trovati. Il confronto resta con ${fallback}.`);
-            if (fallback === def) clearBenchmarkPref();
-            else setBenchPref(fallback, cls);
+            if (fallback === def) clearBenchPref(cls);
+            else setBenchPref(cls, fallback);
             return;
           }
         } else {
@@ -211,7 +209,7 @@ export function ReportView({ symbol }: { symbol: string }) {
     return () => {
       cancelled = true;
     };
-  }, [key, symbol, bench, benchPrefClass, setBenchPref]);
+  }, [key, symbol, bench, setBenchPref, clearBenchPref]);
 
   // Keep showing the current report while only the benchmark changes.
   const report = fetched?.symbol === symbol ? fetched.report : undefined;
@@ -259,8 +257,8 @@ export function ReportView({ symbol }: { symbol: string }) {
   function chooseBench(v: string) {
     setBenchMsg(undefined);
     if (presets.some((p) => p.symbol === v)) setCustom('');
-    if (v === defaultBenchmarkFor(insClass)) clearBenchmarkPref();
-    else setBenchPref(v, insClass);
+    if (v === defaultBenchmarkFor(insClass)) clearBenchPref(insClass);
+    else setBenchPref(insClass, v);
   }
 
   function submitCustom(e: React.FormEvent) {

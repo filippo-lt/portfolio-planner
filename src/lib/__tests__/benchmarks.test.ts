@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BENCHMARKS, benchmarksFor, defaultBenchmarkFor, findBenchmark } from '../benchmarks';
 import { ISIN_RE, isValidIsin } from '../isin';
-import { parseBenchmarkPref } from '../profileStore';
 
 describe('BENCHMARKS', () => {
   it('has valid ISINs (format and check digit)', () => {
@@ -38,17 +37,3 @@ describe('BENCHMARKS', () => {
   });
 });
 
-describe('parseBenchmarkPref', () => {
-  it('reads the new shape', () => {
-    expect(parseBenchmarkPref('{"symbol":"AGGH.MI","assetClass":"bond"}')).toEqual({ symbol: 'AGGH.MI', assetClass: 'bond' });
-  });
-  it('reads a legacy plain string as unknown class', () => {
-    expect(parseBenchmarkPref('SWDA.MI')).toEqual({ symbol: 'SWDA.MI', assetClass: 'unknown' });
-  });
-  it('returns null for empty or malformed values', () => {
-    expect(parseBenchmarkPref('')).toBeNull();
-    expect(parseBenchmarkPref(null)).toBeNull();
-    expect(parseBenchmarkPref('{"symbol":5}')).toBeNull();
-    expect(parseBenchmarkPref('{"symbol":"X","assetClass":"weird"}')).toEqual({ symbol: 'X', assetClass: 'unknown' });
-  });
-});

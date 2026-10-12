@@ -74,39 +74,48 @@ export function saveInvestorProfile(p: InvestorProfile) {
   write(PROFILE_KEY, JSON.stringify({ v: VERSION, profile: p }));
 }
 
-export interface BenchmarkPref {
-  symbol: string;
-  /** Class of the instrument the benchmark was chosen for */
-  assetClass: AssetClass;
-}
+/** Saved benchmark symbol per asset class, so a choice made for one kind of fund never affects another. */
+export type BenchmarkPrefs = Partial<Record<AssetClass, string>>;
 
 const ASSET_CLASSES: AssetClass[] = ['equity', 'bond', 'mixed', 'other', 'unknown'];
 
-/** Reads the stored value; an old plain-string value is kept as a legacy pref with unknown class. */
-export function parseBenchmarkPref(raw: string | null): BenchmarkPref | null {
-  if (!raw) return null;
-  if (!raw.startsWith('{')) return { symbol: raw, assetClass: 'unknown' };
+/**
+ * Reads the stored value. Legacy formats are kept: a plain string and `{symbol, assetClass}`
+ * both become a single slot (a plain string has unknown class).
+ */
+export function parseBenchmarkPrefs(raw: string | null): BenchmarkPrefs {
+  if (!raw) return {};
+  if (!raw.startsWith('{')) return { unknown: raw };
   try {
     const o = JSON.parse(raw);
-    if (!o || typeof o.symbol !== 'string' || !o.symbol) return null;
-    return { symbol: o.symbol, assetClass: ASSET_CLASSES.includes(o.assetClass) ? o.assetClass : 'unknown' };
+    if (!o || typeof o !== 'object') return {};
+    if (typeof o.symbol === 'string') {
+      return o.symbol ? { [ASSET_CLASSES.includes(o.assetClass) ? o.assetClass : 'unknown']: o.symbol } : {};
+    }
+    const out: BenchmarkPrefs = {};
+    for (const c of ASSET_CLASSES) if (typeof o[c] === 'string' && o[c]) out[c] = o[c];
+    return out;
   } catch {
-    return null;
+    return {};
   }
 }
 
-export function useBenchmarkPref(): [BenchmarkPref | null, (symbol: string, assetClass: AssetClass) => void] {
+export function useBenchmarkPrefs(): [BenchmarkPrefs, (assetClass: AssetClass, symbol: string) => void, (assetClass: AssetClass) => void] {
   const raw = useSyncExternalStore(
     subscribe,
     () => read(BENCH_KEY) ?? '',
     () => '',
   );
-  const pref = useMemo(() => parseBenchmarkPref(raw), [raw]);
-  const set = useCallback(
-    (symbol: string, assetClass: AssetClass) => write(BENCH_KEY, JSON.stringify({ symbol, assetClass })),
-    [],
-  );
-  return [pref, set];
+  const prefs = useMemo(() => parseBenchmarkPrefs(raw), [raw]);
+  const set = useCallback((assetClass: AssetClass, symbol: string) => {
+    write(BENCH_KEY, JSON.stringify({ ...parseBenchmarkPrefs(read(BENCH_KEY)), [assetClass]: symbol }));
+  }, []);
+  const clear = useCallback((assetClass: AssetClass) => {
+    const { [assetClass]: _drop, ...rest } = parseBenchmarkPrefs(read(BENCH_KEY));
+    void _drop;
+    write(BENCH_KEY, JSON.stringify(rest));
+  }, []);
+  return [prefs, set, clear];
 }
 
 export function clearBenchmarkPref() {
