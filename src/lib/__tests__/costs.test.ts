@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { EXAMPLE_AMOUNT, terCostPerYear } from '../costs';
+import { terCostPerYear } from '../costs';
 import { fmtEur } from '../format';
 import { terTone } from '../tone';
 
 describe('terCostPerYear', () => {
   it('rounds amount x TER to whole euros', () => {
-    expect(terCostPerYear(EXAMPLE_AMOUNT, 0.0019)).toBe(2);
+    expect(terCostPerYear(1000, 0.0019)).toBe(2);
     expect(terCostPerYear(1000, 0.02)).toBe(20);
     expect(terCostPerYear(1000, 0.0007)).toBe(1);
     expect(terCostPerYear(1000, 0.0004)).toBe(0);

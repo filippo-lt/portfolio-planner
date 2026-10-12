@@ -11,6 +11,11 @@ export const FX_TOLERANCE_DAYS = 7;
 const DAY = 24 * 3600 * 1000;
 const toMs = (d: string) => Date.parse(d + 'T00:00:00Z');
 
+/** A rate; `rateDate` is the day it was observed when `date` is a later date it was carried to (see alignRates). */
+export interface FxRate extends PricePoint {
+  rateDate?: string;
+}
+
 /** Yahoo symbol with the currency per 1 EUR; pence (GBp/GBX) use the pound rate. Undefined for EUR or an unusable code. */
 export function fxSymbol(currency: string | undefined): string | undefined {
   if (!currency) return undefined;
@@ -19,9 +24,9 @@ export function fxSymbol(currency: string | undefined): string | undefined {
 }
 
 /** Latest rate on or before `date`, at most FX_TOLERANCE_DAYS old; undefined otherwise (never estimated). `rates` ascending by date. */
-export function rateOnOrBefore(rates: PricePoint[], date: string): PricePoint | undefined {
+export function rateOnOrBefore(rates: FxRate[], date: string): FxRate | undefined {
   const t = toMs(date);
-  let best: PricePoint | undefined;
+  let best: FxRate | undefined;
   for (const r of rates) {
     if (toMs(r.date) > t) break;
     if (r.close > 0) best = r;
@@ -29,12 +34,12 @@ export function rateOnOrBefore(rates: PricePoint[], date: string): PricePoint | 
   return best && t - toMs(best.date) <= FX_TOLERANCE_DAYS * DAY ? best : undefined;
 }
 
-/** Rates reduced to the given dates (the rate valid on each, dates without one are left out), to keep the payload small. */
-export function alignRates(rates: PricePoint[], dates: string[]): PricePoint[] {
-  const out: PricePoint[] = [];
+/** Rates reduced to the given dates (the rate valid on each, with the day it was observed in `rateDate`, dates without one are left out), to keep the payload small. */
+export function alignRates(rates: PricePoint[], dates: string[]): FxRate[] {
+  const out: FxRate[] = [];
   for (const date of dates) {
     const r = rateOnOrBefore(rates, date);
-    if (r) out.push({ date, close: r.close });
+    if (r) out.push({ date, close: r.close, rateDate: r.rateDate ?? r.date });
   }
   return out;
 }

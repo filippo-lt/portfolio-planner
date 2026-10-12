@@ -21,7 +21,7 @@ describe('fx', () => {
   });
   it('aligns rates to dates, leaving out dates without a rate', () => {
     const r = px([['2024-01-02', 1.1], ['2024-01-05', 1.2]]);
-    expect(alignRates(r, ['2023-12-01', '2024-01-03', '2024-01-06'])).toEqual(px([['2024-01-03', 1.1], ['2024-01-06', 1.2]]));
+    expect(alignRates(r, ['2023-12-01', '2024-01-03', '2024-01-06'])).toEqual([{ date: '2024-01-03', close: 1.1, rateDate: '2024-01-02' }, { date: '2024-01-06', close: 1.2, rateDate: '2024-01-05' }]);
   });
   it('parses the cost percentage', () => {
     expect(parseFxCost('0,25')).toBeCloseTo(0.0025);

@@ -49,9 +49,9 @@ describe('parseUserFees', () => {
 describe('applyCostOverrides', () => {
   it('gives curated ETFs 0 entry/exit from KID, by symbol or ISIN', () => {
     const bySym = applyCostOverrides({ ...base, symbol: 'vwce.de' });
-    expect(bySym.entryFee).toEqual({ value: 0, source: 'kid' });
+    expect(bySym.entryFee).toEqual({ value: 0, source: 'manual' });
     const byIsin = applyCostOverrides({ ...base, isin: 'IE00B4L5Y983' });
-    expect(byIsin.exitFee).toEqual({ value: 0, source: 'kid' });
+    expect(byIsin.exitFee).toEqual({ value: 0, source: 'manual' });
   });
   it('leaves unknown funds alone and keeps existing fees', () => {
     expect(applyCostOverrides(base)).toBe(base);

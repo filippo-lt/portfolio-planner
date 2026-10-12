@@ -72,7 +72,7 @@ const CLASS_LABEL: Record<AssetClass, string> = {
 /** Neutral note when both classes are known and differ; undefined otherwise. a = instrument, b = benchmark. */
 export function classMismatch(a: AssetClass | undefined, b: AssetClass | undefined): string | undefined {
   if (!a || !b || a === 'unknown' || b === 'unknown' || a === b) return undefined;
-  return `Strumento di tipo diverso (${CLASS_LABEL[b]} vs ${CLASS_LABEL[a]}): il confronto potrebbe non essere omogeneo.`;
+  return `Il riferimento è ${CLASS_LABEL[b]}, lo strumento è ${CLASS_LABEL[a]}: il confronto potrebbe non essere omogeneo.`;
 }
 
 /** The benchmark's own class; the curated class fills in when the profile could not tell. */
@@ -170,7 +170,7 @@ export async function buildShareEuro(symbol: string): Promise<ShareEuro> {
     const fees = effectiveFees(instrument);
     const sim = simulate({ amount: DEFAULT_SIM_AMOUNT, prices, entryFee: fees.entry?.value, exitFee: fees.exit?.value, rawPrices: dist?.raw, dividends: dist?.dividends });
     if (!sim) return { final: true };
-    return { line: `${fmtEur(DEFAULT_SIM_AMOUNT)} → ${fmtEur(sim.netValue)} (${monthYear(sim.startDate)} – ${monthYear(sim.endDate)}, dati storici)`, final: true };
+    return { line: `${fmtEur(DEFAULT_SIM_AMOUNT)} → ${fmtEur(sim.netValue)} (${monthYear(sim.startDate)} – ${monthYear(sim.endDate)}, dati storici, al lordo delle imposte)`, final: true };
   } catch {
     return { final: false };
   }
@@ -243,7 +243,7 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
 export async function buildSimilar(symbol: string, periods: FundPeriods): Promise<SimilarItem[]> {
   const [instrument, prices] = await Promise.all([profileOf(symbol), historyOf(symbol)]);
   const cls = instrument.assetClass;
-  if (!cls || cls === 'unknown' || cls === 'other') return [];
+  if (instrument.type === 'STOCK' || !cls || cls === 'unknown' || cls === 'other') return [];
   const vol = annualizedVolatility(prices);
   if (vol === undefined) return [];
   const loaded = await Promise.all(

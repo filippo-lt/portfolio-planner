@@ -42,7 +42,7 @@ describe('findBannedWords', () => {
 /** Italian string literals of the given source files (comments stripped). */
 function literals(src: string): string[] {
   const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
-  return [...code.matchAll(/'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`|>([^<>{}\n]+)</g)].map(
+  return [...code.matchAll(/'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`|>([^<>{}]+)</g)].map(
     (m) => m[1] ?? m[2] ?? m[3] ?? m[4] ?? '',
   );
 }

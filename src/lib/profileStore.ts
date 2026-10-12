@@ -127,15 +127,6 @@ export function useBenchmarkPrefs(): [BenchmarkPrefs, (assetClass: AssetClass, s
   return [prefs, set, clear];
 }
 
-export function clearBenchmarkPref() {
-  try {
-    localStorage.removeItem(BENCH_KEY);
-  } catch {
-    /* storage unavailable */
-  }
-  emit();
-}
-
 /** Fees the user typed for one symbol; only used when the data has none. Stored as a map keyed by upper-case symbol. */
 function readFeeMap(raw: string | null): Record<string, UserFees> {
   if (!raw) return {};

@@ -158,8 +158,10 @@ export function chartGap(data: RebasedPoint[], nameA: string, nameB: string): st
   const years = (toMs(last.date) - toMs(first.date)) / (365.25 * DAY);
   let span: string;
   if (years >= 1) {
-    const y = Math.round(years);
-    span = `${y} ${y === 1 ? 'anno' : 'anni'}`;
+    const total = Math.round(years * 12);
+    const y = Math.floor(total / 12);
+    const m = total % 12;
+    span = `${y} ${y === 1 ? 'anno' : 'anni'}${m > 0 ? ` e ${m} ${m === 1 ? 'mese' : 'mesi'}` : ''}`;
   } else {
     const m = Math.max(1, Math.round(years * 12));
     span = `${m} ${m === 1 ? 'mese' : 'mesi'}`;

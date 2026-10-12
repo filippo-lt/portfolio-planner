@@ -629,7 +629,7 @@ export function ReportView({ symbol }: { symbol: string }) {
                   </summary>
                   <p className="mt-1 px-2 text-muted">
                     Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di partenza) e si calcola il
-                    rendimento annuo di ciascuno. Il risultato mostra il periodo peggiore e quello migliore.
+                    rendimento annuo di ciascuno. Il risultato mostra il periodo con il rendimento più basso e quello con il più alto.
                   </p>
                 </details>
               )}

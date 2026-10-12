@@ -1,7 +1,7 @@
 /** Isomorphic and pure: "what do I take home?" simulation in euros. Prices are adjusted closes, already net of TER. */
 import type { DividendEvent, PricePoint } from './data/types';
 import { parseItDecimal } from './profileValidation';
-import { rateOnOrBefore } from './fx';
+import { rateOnOrBefore, type FxRate } from './fx';
 
 export const DEFAULT_SIM_AMOUNT = 1000;
 export const MAX_SIM_AMOUNT = 10_000_000;
@@ -35,7 +35,7 @@ export interface SimInput {
    * Non-EUR product: `rates` are units of the quote currency per 1 EUR (dated, ascending), `cost` the spread per conversion (fraction).
    * Without a rate near the start or end date the result stays unconverted (`fx` undefined in the result).
    */
-  fx?: { rates: PricePoint[]; cost: number };
+  fx?: { rates: FxRate[]; cost: number };
 }
 
 /** Conversion applied to a result: EUR -> currency at the start, currency -> EUR at the end. */
@@ -45,7 +45,7 @@ export interface FxApplied {
   endRate: number;
   endRateDate: string;
   cost: number;
-  /** EUR value without the spread minus EUR value with it */
+  /** Net value converted at the rates without the spread minus the net value with it */
   costEur: number;
 }
 
@@ -129,10 +129,11 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrice
   const spread = fx && Number.isFinite(fx.cost) && fx.cost >= 0 && fx.cost < 1 ? fx.cost : 0;
   const m0 = rs0 && re0 ? rs0.close / re0.close : 1;
   const m = m0 * (1 - spread) ** 2;
-  const converted = rs0 && re0 ? { startRate: rs0.close, startRateDate: rs0.date, endRate: re0.close, endRateDate: re0.date, cost: spread, costEur: net0 * (m0 - m) } : undefined;
-  const k = converted ? m : 1;
+  const converted = rs0 && re0 ? { startRate: rs0.close, startRateDate: rs0.rateDate ?? rs0.date, endRate: re0.close, endRateDate: re0.rateDate ?? re0.date, cost: spread, costEur: net0 * (m0 - m) } : undefined;
+  // Gross, exit fee and dividends move with the exchange rate only; the spread is shown once, as costEur, so net = gross - exit fee + dividends - costEur.
+  const k = converted ? m0 : 1;
   const exitFeeEur = exitFee0 * k;
-  const netValue = net0 * k;
+  const netValue = net0 * (converted ? m : 1);
   return {
     start: s.close,
     end: e.close,

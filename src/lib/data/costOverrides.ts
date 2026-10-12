@@ -17,8 +17,8 @@ export interface CostOverride {
 export const COST_OVERRIDES: CostOverride[] = BENCHMARKS.map((b) => ({
   symbol: b.symbol,
   isin: b.isin,
-  entryFee: { value: 0, source: 'kid' as const },
-  exitFee: { value: 0, source: 'kid' as const },
+  entryFee: { value: 0, source: 'manual' as const },
+  exitFee: { value: 0, source: 'manual' as const },
   reviewed: false,
 }));
 
