@@ -8,6 +8,9 @@ describe('findBannedWords', () => {
   it.each([
     'migliore', 'Migliori', 'peggiore', 'conviene', 'conveniente', 'consigliato', 'Consigliata', 'consigliati',
     'compra', 'comprare', 'acquista', 'dovresti', 'raccomandato', 'raccomandazione', 'raccomandiamo',
+    'comprando', 'comprato', 'comprata', 'comprati', 'comprate', 'compri', 'comprerei', 'comprereste',
+    'acquistando', 'acquistato', 'acquistata', 'acquistati', 'acquisterei', 'acquisteresti',
+    'dovrebbero', 'dovrebbe', 'dovrei', 'dovresti', 'dovreste',
   ])('flags %s', (w) => {
     expect(findBannedWords(`Questo prodotto è ${w} oggi.`).length).toBeGreaterThan(0);
   });
@@ -19,6 +22,8 @@ describe('findBannedWords', () => {
     'Una comprensione dei dati.',
     'Il costo di acquisto non è incluso.',
     'Il TER è 0,20%.',
+    'Gli acquisti sono tassati.',
+    'Il fondo comprende azioni.',
   ])('does not flag neutral near-miss: %s', (t) => {
     expect(findBannedWords(t)).toEqual([]);
   });
@@ -43,6 +48,7 @@ function literals(src: string): string[] {
 }
 
 describe('UI copy scan', () => {
+  // src/app/api is skipped: the summary prompt quotes banned words as negative instructions.
   const dirs = ['src/lib', 'src/components', 'src/app'];
   const files: string[] = [];
   const walk = (d: string) => {
