@@ -9,12 +9,13 @@ import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchma
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
 import { drawdownTone, fitReading, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
-import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useInvestorProfile } from '@/lib/profileStore';
+import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useInvestorProfile, useSimAmount } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
 import { CostBlock } from './CostBlock';
 import { FeeRows } from './FeeRows';
 import { effectiveFees } from '@/lib/fees';
+import { EuroVerdict, chartSeries } from './EuroVerdict';
 import { AiSummary } from './AiSummary';
 import {
   BackLink,
@@ -163,6 +164,7 @@ export function ReportView({ symbol }: { symbol: string }) {
   const profile = useInvestorProfile();
   const [benchPrefs, setBenchPref, clearBenchPref] = useBenchmarkPrefs();
   const [userFees, setUserFees] = useFeeOverride(symbol);
+  const [simAmount, setSimAmount] = useSimAmount();
   const [showOptional, setShowOptional] = useState(false);
   const [custom, setCustom] = useState('');
   const [benchMsg, setBenchMsg] = useState<string>();
@@ -414,6 +416,7 @@ export function ReportView({ symbol }: { symbol: string }) {
           <CostBlock
             fundTer={ins.ter}
             benchTer={benchTer}
+            amount={simAmount}
             isStock={isStock}
             benchLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
             fundExtra={
@@ -605,6 +608,24 @@ export function ReportView({ symbol }: { symbol: string }) {
                 {report.classNote}
               </Callout>
             )}
+
+            <EuroVerdict
+              amount={simAmount}
+              onAmount={setSimAmount}
+              fund={{
+                // without a reference there is no common period: fall back to the monthly closes
+                prices: report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly,
+                fees: effectiveFees(ins, userFees),
+                ter: isStock ? undefined : ins.ter,
+                currency: ins.currency,
+              }}
+              reference={
+                benchOk && !sameAsBench && report.chart.length > 0
+                  ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency }
+                  : undefined
+              }
+              referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+            />
 
             <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
               {!benchOk ? (

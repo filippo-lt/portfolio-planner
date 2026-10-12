@@ -5,11 +5,13 @@ import type { AssetClass, InstrumentType } from './data/types';
 import type { InvestorProfile } from './profileFit';
 import { parseUserFees, type UserFees } from './fees';
 import { validateProfile } from './profileValidation';
+import { DEFAULT_SIM_AMOUNT, MAX_SIM_AMOUNT } from './simulation';
 import { THEME_KEY, type ThemePref } from './theme';
 
 const PROFILE_KEY = 'investorProfile';
 const BENCH_KEY = 'benchmarkSymbol';
 const FEES_KEY = 'feeOverrides';
+const AMOUNT_KEY = 'simAmount';
 const VERSION = 1;
 const LOADING = '__loading__';
 
@@ -166,6 +168,22 @@ export function useFeeOverride(symbol: string): [UserFees, (fees: UserFees) => v
   return [fees, set];
 }
 
+const validAmount = (v: number) => Number.isFinite(v) && v > 0 && v <= MAX_SIM_AMOUNT;
+
+/** Euro amount used by the simulation and the cost lines; default 1.000 €. */
+export function useSimAmount(): [number, (amount: number) => void] {
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(AMOUNT_KEY) ?? '',
+    () => '',
+  );
+  const amount = useMemo(() => (validAmount(Number(raw || NaN)) ? Number(raw) : DEFAULT_SIM_AMOUNT), [raw]);
+  const set = useCallback((next: number) => {
+    if (validAmount(next)) write(AMOUNT_KEY, String(next));
+  }, []);
+  return [amount, set];
+}
+
 /* Recently opened reports, newest first. */
 const RECENT_KEY = 'recentReports';
 const RECENT_MAX = 6;
@@ -228,7 +246,7 @@ export function setThemePref(p: ThemePref) {
 
 /** Wipes everything the app saved on this device except the appearance choice. */
 export function clearAllUserData() {
-  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY, FEES_KEY]) {
+  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY, FEES_KEY, AMOUNT_KEY]) {
     try {
       localStorage.removeItem(key);
     } catch {
