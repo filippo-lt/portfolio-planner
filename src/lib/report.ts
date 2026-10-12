@@ -1,4 +1,5 @@
 import { cached, TTL_PRICES, TTL_PROFILE } from './cache';
+import { defaultBenchmarkFor } from './benchmarks';
 import { yahooProvider } from './data/yahoo';
 import type { DataProvider } from './data/provider';
 import type { InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
@@ -12,9 +13,10 @@ import {
   type RebasedPoint,
 } from './metrics';
 
-export const DEFAULT_BENCHMARK = 'VWCE.DE';
 export const SYMBOL_RE = /^[A-Za-z0-9.\-=^]{1,20}$/;
 const HISTORY_YEARS = 20;
+/** Benchmark error text when the class has no default and none was asked for (empty symbol). */
+export const CHOOSE_BENCHMARK = 'Scegli un riferimento';
 
 export interface Metrics {
   return1y?: number;
@@ -65,25 +67,31 @@ export const getInstrumentProfile = (s: string) => profileOf(s);
 const historyOf = (s: string) =>
   cached(`history:${s}:${HISTORY_YEARS}`, TTL_PRICES, () => provider.getHistory(s, HISTORY_YEARS));
 
-export async function buildReport(symbol: string, benchmarkSymbol: string = DEFAULT_BENCHMARK): Promise<Report> {
+export async function buildReport(symbol: string, requestedBenchmark?: string): Promise<Report> {
   const [instrument, prices] = await Promise.all([profileOf(symbol), historyOf(symbol)]);
   const notes: string[] = [];
   if (prices.length === 0) notes.push('Storico prezzi: Dato non disponibile.');
 
+  const benchmarkSymbol = requestedBenchmark || defaultBenchmarkFor(instrument.assetClass);
+
   let benchmark: Report['benchmark'];
   let chart: RebasedPoint[] = [];
-  try {
-    const [bProfile, bPrices] = await Promise.all([profileOf(benchmarkSymbol), historyOf(benchmarkSymbol)]);
-    benchmark = { profile: bProfile, metrics: computeMetrics(bPrices) };
-    chart = rebase(prices, bPrices);
-    if (bProfile.currency && instrument.currency && bProfile.currency !== instrument.currency) {
-      notes.push(
-        `I prezzi sono nelle rispettive valute di quotazione (${instrument.currency} e ${bProfile.currency}); il confronto non include l'effetto cambio.`,
-      );
+  if (!benchmarkSymbol) {
+    benchmark = { symbol: '', error: CHOOSE_BENCHMARK };
+  } else {
+    try {
+      const [bProfile, bPrices] = await Promise.all([profileOf(benchmarkSymbol), historyOf(benchmarkSymbol)]);
+      benchmark = { profile: bProfile, metrics: computeMetrics(bPrices) };
+      chart = rebase(prices, bPrices);
+      if (bProfile.currency && instrument.currency && bProfile.currency !== instrument.currency) {
+        notes.push(
+          `I prezzi sono nelle rispettive valute di quotazione (${instrument.currency} e ${bProfile.currency}); il confronto non include l'effetto cambio.`,
+        );
+      }
+      if (chart.length === 0) notes.push('Nessuna data in comune tra strumento e benchmark: grafico Dato non disponibile.');
+    } catch {
+      benchmark = { symbol: benchmarkSymbol, error: 'Benchmark non trovato o dati non disponibili' };
     }
-    if (chart.length === 0) notes.push('Nessuna data in comune tra strumento e benchmark: grafico Dato non disponibile.');
-  } catch {
-    benchmark = { symbol: benchmarkSymbol, error: 'Benchmark non trovato o dati non disponibili' };
   }
 
   return {

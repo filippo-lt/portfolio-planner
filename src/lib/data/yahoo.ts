@@ -1,6 +1,7 @@
 import YahooFinance from 'yahoo-finance2';
 import type { DataProvider } from './provider';
 import { classifyAssetClass } from '../assetClass';
+import { ISIN_RE } from '../isin';
 import type {
   Allocation,
   Fundamentals,
@@ -10,6 +11,8 @@ import type {
   PricePoint,
   SymbolCandidate,
 } from './types';
+
+export { ISIN_RE };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const yf: any = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
@@ -24,7 +27,6 @@ function withTimeout(p: Promise<any>, ms = TIMEOUT_MS): Promise<any> {
 }
 const LOOSE = { validateResult: false };
 
-export const ISIN_RE = /^[A-Z]{2}[A-Z0-9]{9}\d$/;
 
 const FIGI_EXCH_SUFFIX: Record<string, string> = {
   GY: '.DE',

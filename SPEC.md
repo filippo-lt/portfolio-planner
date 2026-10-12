@@ -24,7 +24,7 @@ Web app (Next.js App Router + TypeScript + Tailwind, UI in **Italian**). An inve
 - name, type (ETF/Fondo/Azione), currency, exchange
 - TER / ongoing charges (ETF, fund)
 - annualized return 1y/3y/5y, annualized volatility (daily log/simple returns × √252), historical max drawdown (on all available history, ≥5y requested)
-- benchmark comparison (default VWCE.DE – Vanguard FTSE All-World UCITS ETF Acc; user can change ticker): return, volatility, drawdown side by side + price chart of both rebased to 100
+- benchmark comparison (default depends on the instrument class: equity → VWCE.DE Vanguard FTSE All-World UCITS ETF Acc, bond → AGGH.MI iShares Core Global Aggregate Bond UCITS ETF EUR Hedged, mixed → V60A.DE Vanguard LifeStrategy 60% Equity; other/unknown has no default and the user picks one. Presets come from the curated list in `src/lib/benchmarks.ts`, filtered by class; the user can also type any ticker): return, volatility, drawdown side by side + price chart of both rebased to 100
 - top holdings, sector and country split if available
 - stocks: revenue, net income, total debt, free cash flow (latest annual)
 - Profile fit (rule-based): max drawdown vs tolerance; volatility vs horizon; currency exposure vs EUR.

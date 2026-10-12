@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { InstrumentType } from './data/types';
+import type { AssetClass, InstrumentType } from './data/types';
 import type { InvestorProfile } from './profileFit';
 import { validateProfile } from './profileValidation';
 import { THEME_KEY, type ThemePref } from './theme';
@@ -74,14 +74,39 @@ export function saveInvestorProfile(p: InvestorProfile) {
   write(PROFILE_KEY, JSON.stringify({ v: VERSION, profile: p }));
 }
 
-export function useBenchmarkPref(defaultValue: string): [string, (s: string) => void] {
+export interface BenchmarkPref {
+  symbol: string;
+  /** Class of the instrument the benchmark was chosen for */
+  assetClass: AssetClass;
+}
+
+const ASSET_CLASSES: AssetClass[] = ['equity', 'bond', 'mixed', 'other', 'unknown'];
+
+/** Reads the stored value; an old plain-string value is kept as a legacy pref with unknown class. */
+export function parseBenchmarkPref(raw: string | null): BenchmarkPref | null {
+  if (!raw) return null;
+  if (!raw.startsWith('{')) return { symbol: raw, assetClass: 'unknown' };
+  try {
+    const o = JSON.parse(raw);
+    if (!o || typeof o.symbol !== 'string' || !o.symbol) return null;
+    return { symbol: o.symbol, assetClass: ASSET_CLASSES.includes(o.assetClass) ? o.assetClass : 'unknown' };
+  } catch {
+    return null;
+  }
+}
+
+export function useBenchmarkPref(): [BenchmarkPref | null, (symbol: string, assetClass: AssetClass) => void] {
   const raw = useSyncExternalStore(
     subscribe,
     () => read(BENCH_KEY) ?? '',
     () => '',
   );
-  const set = useCallback((s: string) => write(BENCH_KEY, s), []);
-  return [raw || defaultValue, set];
+  const pref = useMemo(() => parseBenchmarkPref(raw), [raw]);
+  const set = useCallback(
+    (symbol: string, assetClass: AssetClass) => write(BENCH_KEY, JSON.stringify({ symbol, assetClass })),
+    [],
+  );
+  return [pref, set];
 }
 
 export function clearBenchmarkPref() {

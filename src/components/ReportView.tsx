@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Report, Metrics } from '@/lib/report';
-import type { InstrumentProfile } from '@/lib/data/types';
+import type { AssetClass, InstrumentProfile } from '@/lib/data/types';
+import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchmarks';
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
 import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
@@ -33,17 +34,9 @@ import {
   type HlRule,
 } from './ui';
 
-const DEFAULT_BENCHMARK = 'VWCE.DE';
 const SYMBOL_RE = /^[A-Za-z0-9.\-=^]{1,20}$/;
 const LEVEL_RANK: Record<Knowledge, number> = { base: 0, intermedio: 1, avanzato: 2 };
 const FALLBACK_ERR = 'Strumento non trovato o dati non disponibili';
-
-const PRESETS = [
-  { symbol: 'VWCE.DE', label: 'Azioni mondo', detail: 'FTSE All-World' },
-  { symbol: 'SWDA.MI', label: 'Azioni paesi sviluppati', detail: 'MSCI World' },
-  { symbol: 'SXR8.DE', label: 'Azioni USA', detail: 'S&P 500' },
-  { symbol: 'AGGH.MI', label: 'Obbligazioni globali', detail: 'Global Aggregate' },
-];
 
 const TERMS = {
   ret: 'Guadagno o perdita medio per anno nel periodo, calcolato come se fosse stato uguale ogni anno.',
@@ -165,13 +158,16 @@ function ReportSkeleton() {
 export function ReportView({ symbol }: { symbol: string }) {
   const router = useRouter();
   const profile = useInvestorProfile();
-  const [bench, setBench] = useBenchmarkPref(DEFAULT_BENCHMARK);
+  const [benchPref, setBenchPref] = useBenchmarkPref();
+  const bench = benchPref?.symbol ?? '';
+  const benchPrefClass = benchPref?.assetClass;
+  const [showOptional, setShowOptional] = useState(false);
   const [custom, setCustom] = useState('');
   const [benchMsg, setBenchMsg] = useState<string>();
   const [levelOverride, setLevelOverride] = useState<Knowledge | null>(null);
   const [fetched, setFetched] = useState<Fetched | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
-  const lastGood = useRef<string | null>(null);
+  const lastGood = useRef<{ symbol: string; cls: AssetClass } | null>(null);
 
   useEffect(() => {
     if (profile === null) router.replace('/profilo');
@@ -180,7 +176,7 @@ export function ReportView({ symbol }: { symbol: string }) {
   const key = `${symbol}|${bench}|${reloadTick}`;
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/report?symbol=${encodeURIComponent(symbol)}&benchmark=${encodeURIComponent(bench)}`)
+    fetch(`/api/report?symbol=${encodeURIComponent(symbol)}${bench ? `&benchmark=${encodeURIComponent(bench)}` : ''}`)
       .then(async (r) => {
         const j = await r.json();
         if (cancelled) return;
@@ -189,17 +185,25 @@ export function ReportView({ symbol }: { symbol: string }) {
           return;
         }
         const rep = j as Report;
+        const cls = rep.instrument.assetClass ?? 'unknown';
+        if (bench && benchPrefClass !== cls) {
+          // A reference saved for another kind of instrument does not apply: drop it and reload with the class default.
+          clearBenchmarkPref();
+          return;
+        }
         if ('error' in rep.benchmark) {
           // Never leave the user with a broken comparison: fall back to the last working benchmark.
-          const fallback = lastGood.current ?? (bench !== DEFAULT_BENCHMARK ? DEFAULT_BENCHMARK : null);
+          const def = defaultBenchmarkFor(cls);
+          const good = lastGood.current?.cls === cls ? lastGood.current.symbol : null;
+          const fallback = bench ? (good ?? (bench !== def ? (def ?? null) : null)) : null;
           if (fallback && fallback !== bench) {
             setBenchMsg(`${bench}: dati non trovati. Il confronto resta con ${fallback}.`);
-            if (fallback === DEFAULT_BENCHMARK) clearBenchmarkPref();
-            else setBench(fallback);
+            if (fallback === def) clearBenchmarkPref();
+            else setBenchPref(fallback, cls);
             return;
           }
         } else {
-          lastGood.current = bench;
+          lastGood.current = { symbol: bench || rep.benchmark.profile.symbol, cls };
         }
         setFetched({ key, symbol, report: rep });
       })
@@ -207,7 +211,7 @@ export function ReportView({ symbol }: { symbol: string }) {
     return () => {
       cancelled = true;
     };
-  }, [key, symbol, bench, setBench]);
+  }, [key, symbol, bench, benchPrefClass, setBenchPref]);
 
   // Keep showing the current report while only the benchmark changes.
   const report = fetched?.symbol === symbol ? fetched.report : undefined;
@@ -216,6 +220,8 @@ export function ReportView({ symbol }: { symbol: string }) {
   const rank = LEVEL_RANK[level];
 
   const ins = report?.instrument;
+  const insClass: AssetClass = ins?.assetClass ?? 'unknown';
+  const presets = benchmarksFor(insClass);
   useEffect(() => {
     if (ins) pushRecentReport({ symbol, name: ins.name, type: ins.type });
   }, [ins, symbol]);
@@ -252,9 +258,9 @@ export function ReportView({ symbol }: { symbol: string }) {
 
   function chooseBench(v: string) {
     setBenchMsg(undefined);
-    if (PRESETS.some((p) => p.symbol === v)) setCustom('');
-    if (v === DEFAULT_BENCHMARK) clearBenchmarkPref();
-    else setBench(v);
+    if (presets.some((p) => p.symbol === v)) setCustom('');
+    if (v === defaultBenchmarkFor(insClass)) clearBenchmarkPref();
+    else setBenchPref(v, insClass);
   }
 
   function submitCustom(e: React.FormEvent) {
@@ -312,7 +318,13 @@ export function ReportView({ symbol }: { symbol: string }) {
   const best = bestReturn(m);
   const dd = m.maxDrawdown;
   const isStock = ins.type === 'STOCK';
-  const benchPreset = PRESETS.find((p) => p.symbol === bench);
+  const needsChoice = !benchOk && 'error' in report.benchmark && report.benchmark.symbol === '';
+  const activeBench = bench || (benchOk?.profile.symbol ?? '');
+  const hasOptional = presets.some((p) => p.optional);
+  const optionalActive = presets.some((p) => p.optional && p.symbol.toUpperCase() === activeBench.toUpperCase());
+  const shownPresets = presets.filter((p) => !p.optional || showOptional || optionalActive);
+  const benchPreset = presets.find((p) => p.symbol.toUpperCase() === activeBench.toUpperCase());
+  const noPresets = presets.length === 0;
   const ddTol = -Math.abs(profile.maxDrawdownPct);
   const ddTone = drawdownTone(dd?.value, profile.maxDrawdownPct);
   const volTone = volatilityTone(m.volatility, profile.horizonYears);
@@ -500,37 +512,62 @@ export function ReportView({ symbol }: { symbol: string }) {
 
           <Section id="h-bench" title="Confronto con un riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
             <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
-            <div role="radiogroup" aria-label="Riferimento" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {PRESETS.map((p) => {
-                const on = p.symbol === bench;
-                return (
-                  <button
-                    key={p.symbol}
-                    type="button"
+            {noPresets && (
+              <p className="mt-3 text-sm text-muted">Tipo di strumento non riconosciuto: scegli tu il riferimento</p>
+            )}
+            {!noPresets && (
+              <div role="radiogroup" aria-label="Riferimento" className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {shownPresets.map((p) => {
+                  const on = p.symbol.toUpperCase() === activeBench.toUpperCase();
+                  return (
+                    <button
+                      key={p.symbol}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => chooseBench(p.symbol)}
+                      className={cx(
+                        'pressable flex min-h-14 flex-col items-start justify-center rounded-xl border px-3 py-2 text-left',
+                        on ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-line-strong',
+                      )}
+                    >
+                      <span className={cx('text-sm font-semibold', on && 'text-accent')}>{p.label}</span>
+                      <span className="text-xs text-muted">{p.name}</span>
+                      <span className="text-xs text-muted">
+                        {p.symbol} · <span className="text-[11px]">{p.isin}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                {activeBench && !benchPreset && (
+                  <span
                     role="radio"
-                    aria-checked={on}
-                    onClick={() => chooseBench(p.symbol)}
-                    className={cx(
-                      'pressable flex min-h-14 flex-col items-start justify-center rounded-xl border px-3 py-2 text-left',
-                      on ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-line-strong',
-                    )}
+                    aria-checked="true"
+                    className="flex min-h-14 flex-col items-start justify-center rounded-xl border border-accent bg-accent-soft px-3 py-2 sm:col-span-2"
                   >
-                    <span className={cx('text-sm font-semibold', on && 'text-accent')}>{p.label}</span>
-                    <span className="text-xs text-muted">{p.detail}</span>
-                  </button>
-                );
-              })}
-              {!benchPreset && (
-                <span
-                  role="radio"
-                  aria-checked="true"
-                  className="col-span-2 flex min-h-14 flex-col items-start justify-center rounded-xl border border-accent bg-accent-soft px-3 py-2 sm:col-span-4"
-                >
-                  <span className="text-sm font-semibold text-accent">Personalizzato</span>
-                  <span className="text-xs text-muted">{bench}</span>
-                </span>
-              )}
-            </div>
+                    <span className="text-sm font-semibold text-accent">Personalizzato</span>
+                    <span className="text-xs text-muted">{activeBench}</span>
+                  </span>
+                )}
+              </div>
+            )}
+            {noPresets && activeBench && (
+              <p className="mt-2 text-sm text-muted">
+                Riferimento scelto: <span className="font-semibold text-ink">{findBenchmark(activeBench)?.label ?? activeBench}</span>
+              </p>
+            )}
+            {hasOptional && (
+              <label className="mt-2 flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={showOptional || optionalActive}
+                  disabled={optionalActive}
+                  onChange={(e) => setShowOptional(e.target.checked)}
+                  className="h-4 w-4 accent-[var(--accent)]"
+                />
+                Mostra anche S&amp;P 500
+              </label>
+            )}
             <form onSubmit={submitCustom} className="mt-2 flex gap-2">
               <label htmlFor="bench" className="sr-only">
                 Altro ticker di riferimento
@@ -561,9 +598,14 @@ export function ReportView({ symbol }: { symbol: string }) {
 
             <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
               {!benchOk ? (
-                <p className="mt-4 text-muted">
-                  Riferimento {bench}: {'error' in report.benchmark ? report.benchmark.error : NA}
-                </p>
+                needsChoice ? (
+                  <p className="mt-4 text-muted">Scegli un riferimento per vedere il confronto.</p>
+                ) : (
+                  <p className="mt-4 text-muted">
+                    Riferimento {'symbol' in report.benchmark ? report.benchmark.symbol : bench}:{' '}
+                    {'error' in report.benchmark ? report.benchmark.error : NA}
+                  </p>
+                )
               ) : sameAsBench ? (
                 <Callout tone="accent" className="mt-4">
                   Lo strumento coincide con il riferimento scelto: seleziona un altro riferimento per vedere un confronto.

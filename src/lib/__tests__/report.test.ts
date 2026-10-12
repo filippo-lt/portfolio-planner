@@ -33,3 +33,12 @@ describe('buildReport notes', () => {
     expect(r.monthly.length).toBeGreaterThan(1);
   });
 });
+
+describe('buildReport benchmark choice', () => {
+  it('asks for a reference when the class has no default and none was given', async () => {
+    const { buildReport, CHOOSE_BENCHMARK } = await import('../report');
+    const r = await buildReport('AAA');
+    expect(r.benchmark).toEqual({ symbol: '', error: CHOOSE_BENCHMARK });
+    expect(r.chart).toEqual([]);
+  });
+});
