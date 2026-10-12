@@ -122,7 +122,7 @@ Delivers: clear, early view of what the fund costs (TER, entry/exit fees) compar
 
 ### 2.4 Let user enter a fee manually when data is missing
 - Priority: P2 | Size: S | Type: new
-- What/why: Small input "Entry fee %" / "Exit fee %" so the user can type what their bank charges.
+- What/why: Small input "Entry fee %" / "Exit fee %" so the user can type what their bank charges. Fallback only: the goal is real fee data from 2.2.
 - Source: friend 5.
 - Files: `ReportView.tsx`, `src/lib/profileStore.ts`.
 - Acceptance: Value saved in the browser, used by Phase 3, clearly marked as "entered by you".
@@ -186,20 +186,20 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 
 ---
 
-## Phase 4: Italy-only tax (optional, after Phase 3 is trusted)
+## Phase 4: Italian tax
 
-Delivers: net-of-tax euro result for Italian residents only. Comes last because it is the highest risk: wrong tax is worse than no tax.
+Delivers: net-of-tax euro result for Italian residents. Comes after Phase 3 because tax applies to the simulated result. Italy first because it is our users' country and the rules are known; other countries follow in Phase 5.
 
-### 4.1 Tax country setting, Italy only
-- Priority: P2 | Size: S | Type: new
-- What/why: Add "Residenza fiscale" in the profile with one value: Italy. Other countries show "tax not included". Do not build a country list.
+### 4.1 Tax country setting
+- Priority: P1 | Size: S | Type: new
+- What/why: Add "Residenza fiscale" in the profile. Italy works first; countries not yet supported show "tax not included" until Phase 5 adds them.
 - Source: friend 6, review note.
 - Files: `src/lib/profileFit.ts` (`InvestorProfile`), `src/lib/profileValidation.ts`, `src/app/profilo/page.tsx`, `src/lib/profileStore.ts`.
 - Acceptance: Old saved profiles still load; field optional.
 - Depends on: Phase 3.
 
 ### 4.2 Italian capital gains in the simulation
-- Priority: P2 | Size: L | Type: new
+- Priority: P1 | Size: L | Type: new
 - What/why: 26% on gains in general, 12.5% on the government-bond part; for ETFs, gains are "redditi di capitale" so losses cannot offset them (show this as a note). Apply to the exit result only. Needs a tax-advisor review.
 - Source: friend 6, review note.
 - Files: new `src/lib/tax/it.ts`, `src/lib/simulation.ts`, `EuroVerdict.tsx`, tests.
@@ -208,14 +208,34 @@ Delivers: net-of-tax euro result for Italian residents only. Comes last because 
 
 ---
 
-## Not now / parked
+## Phase 5: More countries and currency costs
 
-- Multi-country tax: each country has its own rates, rules and loss offsets. Too big, high risk of wrong numbers. Revisit after Italy works.
-- Currency conversion costs (friend 6): small effect, needs broker-specific data. Show a note only; revisit with Phase 4.
-- S&P 500 always on as a benchmark: rejected, conflicts with friend 4 (unfair for bond funds). Kept only for equity funds (1.3).
-- Equity ETFs offered as benchmark for a bond fund: removed by 1.2. Acceptable in the first beta only.
+Delivers: the same net euro result for users outside Italy, plus the real cost of currency. Comes after Phase 4 because it reuses the tax engine built there.
+
+### 5.1 Tax engine per country
+- Priority: P1 | Size: L | Type: new
+- What/why: Turn `src/lib/tax/it.ts` into one module per country behind a common interface (rate on gains, special rates, whether losses offset gains, tax on coupons/dividends). Add the countries our test users live in first.
+- Source: friend 6.
+- Files: new `src/lib/tax/` (one file per country + `index.ts`), `src/lib/simulation.ts`, tests per country.
+- Acceptance: Each country has hand-checked test cases and a "rule used" label in the UI; unsupported countries show "tax not included".
+- Depends on: 4.2.
+
+### 5.2 Currency conversion costs
+- Priority: P1 | Size: M | Type: new
+- What/why: When the fund or the similar product trades in another currency (USD, GBP), show the conversion and its cost (spread / broker fee, user-editable, default from a stated source).
+- Source: friend 6.
+- Files: `src/lib/simulation.ts`, `src/lib/data/yahoo.ts` (FX rates), `EuroVerdict.tsx`, `src/lib/profileStore.ts`.
+- Acceptance: Result is shown in EUR with the FX cost as its own line; FX rate date shown.
+- Depends on: 3.1.
+
+---
+
+## Rejected (product decisions, not cuts)
+
+- S&P 500 always on as a benchmark: conflicts with friend 4 (unfair for bond funds). Kept only for equity funds (1.3).
+- Equity ETFs offered as benchmark for a bond fund: removed by 1.2.
+- Telling the user what to buy, or a buy button: against `SPEC.md`. We show similar products instead (3.6).
 - Becoming a general fund comparator like other sites: against the product direction (friend 7).
-- Portfolio of several funds / accounts / buy button: outside the SPEC scope.
 
 ## Open questions
 
