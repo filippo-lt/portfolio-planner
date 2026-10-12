@@ -109,33 +109,43 @@ export function EuroVerdict({
   const invalid = draft !== undefined && parseSimAmount(draft) === undefined;
   const currencies = [...new Set([fund.currency, reference?.currency].filter((c): c is string => !!c && c !== 'EUR'))];
   return (
-    <section aria-labelledby={`${id}-t`} className="card mt-4 rounded-2xl border border-line bg-surface p-3.5">
+    <section aria-labelledby={`${id}-t`} className="card mt-3 rounded-2xl border border-line bg-surface p-3.5">
       <h2 id={`${id}-t`} className="text-sm font-semibold">
         Cosa ottieni in euro
       </h2>
       <p className="mt-0.5 text-xs text-muted">Simulazione sui prezzi storici: i risultati passati non indicano quelli futuri.</p>
-      <label htmlFor={id} className="mt-3 block text-xs text-muted">
-        Importo investito (€)
-      </label>
-      <input
-        id={id}
-        value={text}
-        inputMode="decimal"
-        autoComplete="off"
-        maxLength={12}
-        aria-invalid={invalid}
-        aria-describedby={invalid ? `${id}-err` : undefined}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          const v = parseSimAmount(e.target.value);
-          if (v !== undefined) onAmount(v);
-        }}
-        onBlur={() => setDraft(undefined)}
-        className="mt-1 h-11 w-40 rounded-xl border border-line-strong/60 bg-surface px-3 text-base tabular-nums focus:border-accent"
-      />
+      <div className="mt-2 flex items-center gap-2">
+        <label htmlFor={id} className="text-xs text-muted">
+          Importo investito (€)
+        </label>
+        <input
+          id={id}
+          value={text}
+          inputMode="decimal"
+          autoComplete="off"
+          maxLength={12}
+          aria-invalid={invalid}
+          aria-describedby={invalid ? `${id}-err` : undefined}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            const v = parseSimAmount(e.target.value);
+            if (v !== undefined) onAmount(v);
+          }}
+          onBlur={() => setDraft(undefined)}
+          className="h-11 w-32 rounded-xl border border-line-strong/60 bg-surface px-3 text-base tabular-nums focus:border-accent"
+        />
+      </div>
       {invalid && (
         <p id={`${id}-err`} role="alert" className="mt-1 text-xs text-error">
           Inserisci un importo tra 1 e 10.000.000 €.
+        </p>
+      )}
+      {referenceLabel && (
+        <p className="mt-1 text-xs text-muted">
+          Riferimento: {referenceLabel} ·{' '}
+          <a href="#h-bench" className="font-medium text-accent underline underline-offset-2">
+            Cambia
+          </a>
         </p>
       )}
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">

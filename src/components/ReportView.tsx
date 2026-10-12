@@ -376,8 +376,8 @@ export function ReportView({ symbol }: { symbol: string }) {
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-x-10">
         <div className="lg:col-start-1">
           <header>
-            <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <h1 className="text-xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
               <Chip tone="accent">{typeLabel(ins.type)}</Chip>
               {ins.currency && <Chip>{ins.currency}</Chip>}
               {ins.exchange && <Chip>{exchangeLabel(ins.exchange)}</Chip>}
@@ -394,6 +394,27 @@ export function ReportView({ symbol }: { symbol: string }) {
               {m.historyEnd ? ` · dati al ${fmtDate(m.historyEnd)}` : ''}
             </p>
           </header>
+
+          <EuroVerdict
+            amount={simAmount}
+            onAmount={setSimAmount}
+            fund={{
+              // without a reference there is no common period: fall back to the monthly closes
+              prices: report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly,
+              fees: effectiveFees(ins, userFees),
+              ter: isStock ? undefined : ins.ter,
+              currency: ins.currency,
+              distribution: ins.distribution,
+              dist: report.dist?.instrument,
+            }}
+            reference={
+              benchOk && !sameAsBench && report.chart.length > 0
+                ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark }
+                : undefined
+            }
+            referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+          />
+
 
           <div className="mt-5">
             <SegmentedControl
@@ -433,90 +454,6 @@ export function ReportView({ symbol }: { symbol: string }) {
             benchExtra={benchOk ? <FeeRows fees={effectiveFees(benchOk.profile)} /> : undefined}
           />
 
-          <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 3 && 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
-            {figures}
-          </dl>
-
-          <AiSummary report={report} fit={fit} level={level} />
-        </div>
-
-        <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:[&_section]:mt-0">
-          <div className="lg:sticky lg:top-20">
-            <Section
-              id="h-fit"
-              title="Rispetto al tuo profilo"
-              aside={
-                <Link
-                  href="/profilo"
-                  className="pressable -mr-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft"
-                >
-                  Modifica profilo
-                </Link>
-              }
-            >
-              <p className="-mt-1 mb-3 text-sm text-muted">
-                Soglia di perdita {fmtNum(profile.maxDrawdownPct, 0)}% · orizzonte {profile.horizonYears} {profile.horizonYears === 1 ? 'anno' : 'anni'}
-              </p>
-              <FitTally tones={readings.map((r) => r.tone)} />
-              <ul className="space-y-2">
-                {fit.map((f, i) => {
-                  const r = readings[i] ?? { tone: 'neutral' as Tone };
-                  return (
-                    <li key={f.id} className={cx('card rounded-2xl border border-line bg-surface p-4', toneEdge(r.tone))}>
-                      {r.label && (
-                        <div className="mb-1.5">
-                          <TonePill tone={r.tone}>{r.label}</TonePill>
-                        </div>
-                      )}
-                      <p className="text-[0.9375rem] leading-6">
-                        <ToneText text={f.text} rules={fitRules(f, r.tone)} />
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-              {fit.some((f) => f.id === 'rolling') && (
-                <details className="mt-2 rounded-xl px-1 text-sm">
-                  <summary className="pressable inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 font-medium text-accent hover:bg-accent-soft">
-                    Cosa sono le finestre mobili?
-                  </summary>
-                  <p className="mt-1 px-2 text-muted">
-                    Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di partenza) e si calcola il
-                    rendimento annuo di ciascuno. Il risultato mostra il periodo peggiore e quello migliore.
-                  </p>
-                </details>
-              )}
-            </Section>
-          </div>
-        </aside>
-
-        <div className="lg:col-start-1">
-          {rank >= 1 && (!benchOk || sameAsBench || rank >= 2) && (
-            <Section id="h-perf" title={rank >= 2 ? 'Dettagli di calcolo' : 'Rendimenti per periodo'}>
-              <Rows
-                rows={[
-                  // With a working comparison, returns per period are already in the comparison table.
-                  ...((!benchOk || sameAsBench
-                    ? [
-                        ['Rendimento annuo, 1 anno', signedPct(m.return1y)],
-                        ['Rendimento annuo, 3 anni', signedPct(m.return3y)],
-                        ['Rendimento annuo, 5 anni', signedPct(m.return5y)],
-                      ]
-                    : []) as [string, ReactNode][]),
-                  ...(rank >= 2 && m.volatilityYears
-                    ? ([['Volatilità annua calcolata su', `ultimi ${fmtNum(m.volatilityYears)} anni`]] as [string, ReactNode][])
-                    : []),
-                  ...(rank >= 2
-                    ? ([
-                        ['Inizio della perdita (massimo)', fmtDate(dd?.peakDate)],
-                        ['Fine della perdita (minimo)', fmtDate(dd?.troughDate)],
-                        ['Storico disponibile', m.historyStart ? `${fmtDate(m.historyStart)} – ${fmtDate(m.historyEnd)}` : NA],
-                      ] as [string, ReactNode][])
-                    : []),
-                ]}
-              />
-            </Section>
-          )}
 
           <Section id="h-bench" title="Confronto con un riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
             <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
@@ -610,34 +547,6 @@ export function ReportView({ symbol }: { symbol: string }) {
               </Callout>
             )}
 
-            <EuroVerdict
-              amount={simAmount}
-              onAmount={setSimAmount}
-              fund={{
-                // without a reference there is no common period: fall back to the monthly closes
-                prices: report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly,
-                fees: effectiveFees(ins, userFees),
-                ter: isStock ? undefined : ins.ter,
-                currency: ins.currency,
-                distribution: ins.distribution,
-                dist: report.dist?.instrument,
-              }}
-              reference={
-                benchOk && !sameAsBench && report.chart.length > 0
-                  ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark }
-                  : undefined
-              }
-              referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
-            />
-
-            <SimilarProducts
-              symbol={symbol}
-              assetClass={insClass}
-              volatility={report.metrics.volatility}
-              prices={report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly}
-              amount={simAmount}
-            />
-
             <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
               {!benchOk ? (
                 needsChoice ? (
@@ -659,7 +568,6 @@ export function ReportView({ symbol }: { symbol: string }) {
                       Il riferimento scelto è lo stesso strumento quotato su un&apos;altra borsa: i valori sono quasi identici.
                     </Callout>
                   )}
-                  {rank >= 1 && <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />}
                   {report.chart.length > 0 ? (
                     <PriceChart data={report.chart} nameA={ins.symbol} nameB={benchOk.profile.symbol} />
                   ) : (
@@ -669,6 +577,109 @@ export function ReportView({ symbol }: { symbol: string }) {
               )}
             </div>
           </Section>
+
+        </div>
+
+        <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:[&_section]:mt-0">
+          <div className="lg:sticky lg:top-20">
+            <Section
+              id="h-fit"
+              title="Rispetto al tuo profilo"
+              aside={
+                <Link
+                  href="/profilo"
+                  className="pressable -mr-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-accent hover:bg-accent-soft"
+                >
+                  Modifica profilo
+                </Link>
+              }
+            >
+              <p className="-mt-1 mb-3 text-sm text-muted">
+                Soglia di perdita {fmtNum(profile.maxDrawdownPct, 0)}% · orizzonte {profile.horizonYears} {profile.horizonYears === 1 ? 'anno' : 'anni'}
+              </p>
+              <FitTally tones={readings.map((r) => r.tone)} />
+              <ul className="space-y-2">
+                {fit.map((f, i) => {
+                  const r = readings[i] ?? { tone: 'neutral' as Tone };
+                  return (
+                    <li key={f.id} className={cx('card rounded-2xl border border-line bg-surface p-4', toneEdge(r.tone))}>
+                      {r.label && (
+                        <div className="mb-1.5">
+                          <TonePill tone={r.tone}>{r.label}</TonePill>
+                        </div>
+                      )}
+                      <p className="text-[0.9375rem] leading-6">
+                        <ToneText text={f.text} rules={fitRules(f, r.tone)} />
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+              {fit.some((f) => f.id === 'rolling') && (
+                <details className="mt-2 rounded-xl px-1 text-sm">
+                  <summary className="pressable inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 font-medium text-accent hover:bg-accent-soft">
+                    Cosa sono le finestre mobili?
+                  </summary>
+                  <p className="mt-1 px-2 text-muted">
+                    Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di partenza) e si calcola il
+                    rendimento annuo di ciascuno. Il risultato mostra il periodo peggiore e quello migliore.
+                  </p>
+                </details>
+              )}
+            </Section>
+          </div>
+        </aside>
+
+        <div className="lg:col-start-1">
+          <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 3 && 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
+            {figures}
+          </dl>
+
+
+          <SimilarProducts
+            symbol={symbol}
+            assetClass={insClass}
+            volatility={report.metrics.volatility}
+            prices={report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly}
+            amount={simAmount}
+          />
+
+
+          <AiSummary report={report} fit={fit} level={level} />
+
+          {benchOk && !sameAsBench && rank >= 1 && (
+            <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
+              <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />
+            </div>
+          )}
+
+          {rank >= 1 && (!benchOk || sameAsBench || rank >= 2) && (
+            <Section id="h-perf" title={rank >= 2 ? 'Dettagli di calcolo' : 'Rendimenti per periodo'}>
+              <Rows
+                rows={[
+                  // With a working comparison, returns per period are already in the comparison table.
+                  ...((!benchOk || sameAsBench
+                    ? [
+                        ['Rendimento annuo, 1 anno', signedPct(m.return1y)],
+                        ['Rendimento annuo, 3 anni', signedPct(m.return3y)],
+                        ['Rendimento annuo, 5 anni', signedPct(m.return5y)],
+                      ]
+                    : []) as [string, ReactNode][]),
+                  ...(rank >= 2 && m.volatilityYears
+                    ? ([['Volatilità annua calcolata su', `ultimi ${fmtNum(m.volatilityYears)} anni`]] as [string, ReactNode][])
+                    : []),
+                  ...(rank >= 2
+                    ? ([
+                        ['Inizio della perdita (massimo)', fmtDate(dd?.peakDate)],
+                        ['Fine della perdita (minimo)', fmtDate(dd?.troughDate)],
+                        ['Storico disponibile', m.historyStart ? `${fmtDate(m.historyStart)} – ${fmtDate(m.historyEnd)}` : NA],
+                      ] as [string, ReactNode][])
+                    : []),
+                ]}
+              />
+            </Section>
+          )}
+
 
           {(ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1 && (
             <Section id="h-comp" title="Composizione">

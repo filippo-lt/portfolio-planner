@@ -3,6 +3,9 @@ import { BENCHMARKS, defaultBenchmarkFor, findBenchmark } from './benchmarks';
 import { applyCostOverrides } from './data/costOverrides';
 import { yahooProvider } from './data/yahoo';
 import type { DataProvider } from './data/provider';
+import { effectiveFees } from './fees';
+import { fmtEur, fmtMonthYear } from './format';
+import { DEFAULT_SIM_AMOUNT, simulate } from './simulation';
 import { detectDistribution } from './distribution';
 import { growthRatio, similarProducts, type FundPeriods, type SimilarItem } from './similar';
 import type { AssetClass, DividendEvent, InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
@@ -124,6 +127,24 @@ async function loadDistData(symbol: string, dates: string[]): Promise<DistData |
       if (close !== undefined) raw.push({ date, close });
     }
     return raw.length >= 2 ? { raw, dividends } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Full-history euro line for the share image: default amount, fund only, fees as known (never estimated).
+ * Undefined without a history or for a non-euro quote (no conversion is made).
+ */
+export async function buildShareEuro(symbol: string): Promise<string | undefined> {
+  try {
+    const [instrument, prices] = await Promise.all([profileOf(symbol), historyOf(symbol)]);
+    if (instrument.currency !== 'EUR' || prices.length < 2) return undefined;
+    const dist = instrument.distribution === 'dist' ? await loadDistData(symbol, prices.map((p) => p.date)) : undefined;
+    const fees = effectiveFees(instrument);
+    const sim = simulate({ amount: DEFAULT_SIM_AMOUNT, prices, entryFee: fees.entry?.value, exitFee: fees.exit?.value, rawPrices: dist?.raw, dividends: dist?.dividends });
+    if (!sim) return undefined;
+    return `${fmtEur(DEFAULT_SIM_AMOUNT)} → ${fmtEur(sim.netValue)} (${fmtMonthYear(sim.startDate)} – ${fmtMonthYear(sim.endDate)}, dati storici)`;
   } catch {
     return undefined;
   }

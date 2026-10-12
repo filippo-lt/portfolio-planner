@@ -1,6 +1,6 @@
 import { cacheLife } from 'next/cache';
 import type { InstrumentProfile } from './data/types';
-import { getInstrumentProfile, SYMBOL_RE } from './report';
+import { buildShareEuro, getInstrumentProfile, SYMBOL_RE } from './report';
 
 /** Same for every visitor, so link previews can share it. Throws (uncached) when the provider fails. */
 async function cachedProfile(symbol: string): Promise<InstrumentProfile> {
@@ -17,6 +17,19 @@ export async function shareProfile(symbol: string, timeoutMs = 2500): Promise<In
   const timer = setTimeout(giveUp, timeoutMs);
   try {
     return await Promise.race([cachedProfile(symbol).catch(() => undefined), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Euro line for the share image; gives up quickly like shareProfile. */
+export async function shareEuro(symbol: string, timeoutMs = 2500): Promise<string | undefined> {
+  if (!SYMBOL_RE.test(symbol)) return undefined;
+  let giveUp = () => {};
+  const timeout = new Promise<undefined>((resolve) => (giveUp = () => resolve(undefined)));
+  const timer = setTimeout(giveUp, timeoutMs);
+  try {
+    return await Promise.race([buildShareEuro(symbol), timeout]);
   } finally {
     clearTimeout(timer);
   }
