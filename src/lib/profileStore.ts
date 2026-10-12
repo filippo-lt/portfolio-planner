@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { InvestorProfile } from './profileFit';
 import { validateProfile } from './profileValidation';
+import { THEME_KEY, type ThemePref } from './theme';
 
 const PROFILE_KEY = 'investorProfile';
 const BENCH_KEY = 'benchmarkSymbol';
@@ -128,6 +129,39 @@ export function pushRecentReport(item: RecentItem) {
 
 export function clearRecentReports() {
   write(RECENT_KEY, '[]');
+}
+
+/* Appearance: absent key means "follow the OS". */
+export function useThemePref(): ThemePref {
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(THEME_KEY) ?? '',
+    () => '',
+  );
+  return raw === 'light' || raw === 'dark' ? raw : 'system';
+}
+
+export function setThemePref(p: ThemePref) {
+  try {
+    if (p === 'system') localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, p);
+  } catch {
+    /* storage unavailable */
+  }
+  (window as { __applyTheme?: () => void }).__applyTheme?.();
+  emit();
+}
+
+/** Wipes everything the app saved on this device except the appearance choice. */
+export function clearAllUserData() {
+  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY]) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  emit();
 }
 
 /** One-shot, in-memory UI messages passed across client navigations. */

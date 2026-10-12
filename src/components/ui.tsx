@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, type ComponentProps, type ReactNode } from 'react';
+import { useRef, type ComponentProps, type ReactNode, type Ref } from 'react';
 import type { Tone } from '@/lib/tone';
 
 export type { Tone };
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-type ButtonProps = ComponentProps<'button'> & { variant?: 'primary' | 'secondary' | 'ghost'; loading?: boolean; block?: boolean };
+type ButtonProps = ComponentProps<'button'> & { variant?: keyof typeof BTN_VARIANT; loading?: boolean; block?: boolean };
 
 const BTN_BASE =
   'pressable inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold disabled:opacity-60 disabled:active:scale-100';
@@ -16,6 +16,7 @@ const BTN_VARIANT = {
   primary: 'btn-primary bg-accent text-accent-fg',
   secondary: 'border border-accent/30 bg-surface text-accent hover:border-accent/60 hover:bg-accent-soft',
   ghost: 'text-accent hover:bg-accent-soft',
+  danger: 'border border-error-line bg-error-soft text-error hover:border-error',
 };
 
 export function Button({ variant = 'primary', loading, block, className, children, disabled, ...rest }: ButtonProps) {
@@ -32,7 +33,7 @@ export function Button({ variant = 'primary', loading, block, className, childre
   );
 }
 
-export function ButtonLink({ variant = 'primary', block, className, ...rest }: ComponentProps<typeof Link> & { variant?: 'primary' | 'secondary' | 'ghost'; block?: boolean }) {
+export function ButtonLink({ variant = 'primary', block, className, ...rest }: ComponentProps<typeof Link> & { variant?: keyof typeof BTN_VARIANT; block?: boolean }) {
   return <Link {...rest} className={cx(BTN_BASE, BTN_VARIANT[variant], block && 'w-full', className)} />;
 }
 
@@ -197,22 +198,32 @@ export function InfoTip({ term, children }: { term: string; children: ReactNode 
           <path d="M10 9v5M10 6.2v.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </button>
-      <dialog
-        ref={ref}
-        aria-label={term}
-        onClick={(e) => e.target === e.currentTarget && close()}
-        className="sheet m-0 mt-auto w-full max-w-none rounded-t-3xl border-t border-line bg-surface p-0 text-ink shadow-2xl sm:m-auto sm:max-w-md sm:rounded-3xl sm:border"
-      >
-        <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3">
-          <div aria-hidden="true" className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line sm:hidden" />
-          <h2 className="text-lg font-semibold tracking-tight">{term}</h2>
-          <p className="mt-2 leading-relaxed text-muted">{children}</p>
-          <Button variant="secondary" block className="mt-5" onClick={close}>
-            Ho capito
-          </Button>
-        </div>
-      </dialog>
+      <Sheet ref={ref} title={term}>
+        <p className="mt-2 leading-relaxed text-muted">{children}</p>
+        <Button variant="secondary" block className="mt-5" onClick={close}>
+          Ho capito
+        </Button>
+      </Sheet>
     </>
+  );
+}
+
+/** Modal <dialog>: bottom sheet on mobile, centered dialog on desktop. Backdrop click closes. */
+export function Sheet({ ref, title, onClose, children }: { ref: Ref<HTMLDialogElement>; title: string; onClose?: () => void; children: ReactNode }) {
+  return (
+    <dialog
+      ref={ref}
+      aria-label={title}
+      onClose={onClose}
+      onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}
+      className="sheet m-0 mt-auto max-h-[90dvh] w-full max-w-none rounded-t-3xl border-t border-line bg-surface p-0 text-ink shadow-2xl sm:m-auto sm:max-w-md sm:rounded-3xl sm:border"
+    >
+      <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3">
+        <div aria-hidden="true" className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line sm:hidden" />
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        {children}
+      </div>
+    </dialog>
   );
 }
 
