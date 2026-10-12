@@ -769,7 +769,7 @@ function CompareCell({ v, signed, wins, className }: { v: number | undefined; si
   return (
     <td className={cx('py-2.5 text-right tabular-nums', className)}>
       <span className={cx('inline-flex items-center gap-1', wins ? 'font-bold' : 'font-medium')}>
-        {wins && <span className="sr-only">Migliore: </span>}
+        {wins && <span className="sr-only">Evidenziato: </span>}
         {wins && <ToneIcon tone="good" className="h-3.5 w-3.5 text-success" />}
         {signed ? <SignedPct v={v} /> : fmtPct(v)}
       </span>

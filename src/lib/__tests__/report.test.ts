@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FORBIDDEN } from './profileFit.test';
+import { findBannedWords } from '../tone';
 
 vi.mock('../cache', () => ({
   cached: (_k: string, _t: number, fn: () => Promise<unknown>) => fn(),
@@ -29,7 +29,7 @@ describe('buildReport notes', () => {
     const { buildReport } = await import('../report');
     const r = await buildReport('AAA', 'BBB');
     expect(r.notes.length).toBeGreaterThan(0);
-    for (const n of r.notes) expect(n).not.toMatch(FORBIDDEN);
+    for (const n of r.notes) expect(findBannedWords(n)).toEqual([]);
     expect(r.monthly.length).toBeGreaterThan(1);
   });
 });
@@ -48,7 +48,7 @@ describe('classMismatch', () => {
     const { classMismatch } = await import('../report');
     const msg = classMismatch('equity', 'bond');
     expect(msg).toBe('Strumento di tipo diverso (obbligazionario vs azionario): il confronto potrebbe non essere omogeneo.');
-    expect(msg).not.toMatch(FORBIDDEN);
+    expect(findBannedWords(msg ?? '')).toEqual([]);
   });
   it('stays silent when equal or when either is unknown/missing', async () => {
     const { classMismatch } = await import('../report');

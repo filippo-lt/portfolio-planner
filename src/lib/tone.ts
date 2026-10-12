@@ -4,6 +4,36 @@ import { horizonBand } from './profileFit';
 import { rollingReturnRange } from './metrics';
 import type { PricePoint } from './data/types';
 
+/**
+ * Words the product must never use (SPEC hard rules): verdicts, rankings, advice, buy/sell calls.
+ * Matched case-insensitively on whole words (Unicode-aware), with Italian inflections spelled out,
+ * so neutral near-misses such as "compreso" or "comprende" are not flagged.
+ */
+const W = (body: string) => new RegExp(`(?<![\\p{L}\\p{N}_])(?:${body})(?![\\p{L}\\p{N}_])`, 'iu');
+export const BANNED_WORDS: readonly RegExp[] = [
+  W('miglior[ei]|meglio'),
+  W('peggior[ei]'),
+  W('conviene|convengono|convenire|convenient\\p{L}*|convenienza'),
+  W('consigliat\\p{L}*|consigli\\p{L}*|sconsigli\\p{L}*'),
+  W('compra|comprare|compriamo|comprate|comprano|comprerei|acquista|acquistare|acquistate|acquistano|acquistiamo'),
+  W('dovresti|dovrebbe|dovreste'),
+  W('raccomand\\p{L}*'),
+  W('ottim\\p{L}*|ideale|ideali'),
+  W('rischios\\p{L}*|sicur\\p{L}*|prudent\\p{L}*|favorev\\p{L}*'),
+  W('adatt\\p{L}*|buon\\p{L}*|cattiv\\p{L}*'),
+  W('vend\\p{L}*'),
+];
+
+/** Banned words found in `text` (empty = clean). */
+export function findBannedWords(text: string): string[] {
+  const out: string[] = [];
+  for (const re of BANNED_WORDS) {
+    const m = text.match(new RegExp(re.source, 'giu'));
+    if (m) out.push(...m);
+  }
+  return out;
+}
+
 export type Tone = 'good' | 'worry' | 'bad' | 'neutral';
 
 /** Within this many points of the drawdown threshold counts as "close to it". */

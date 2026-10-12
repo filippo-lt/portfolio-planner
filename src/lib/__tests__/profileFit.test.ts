@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PricePoint } from '../data/types';
+import { findBannedWords } from '../tone';
 import { profileFit, type InvestorProfile } from '../profileFit';
 
 const profile: InvestorProfile = {
@@ -10,7 +11,6 @@ const profile: InvestorProfile = {
   maxDrawdownPct: 20,
   knowledge: 'base',
 };
-export const FORBIDDEN = /ottimo|rischios|conveni|sicur|favorev|sconsig|prudente|consigli|adatt|buon|cattiv|compra|vend/i;
 
 describe('profileFit', () => {
   it('flags drawdown above tolerance', () => {
@@ -54,7 +54,7 @@ describe('profileFit', () => {
       { maxDrawdown: -0.05, volatility: 0.05, currency: 'EUR' },
       { currency: '' },
     ]) {
-      for (const st of profileFit(profile, m)) expect(st.text).not.toMatch(FORBIDDEN);
+      for (const st of profileFit(profile, m)) expect(findBannedWords(st.text)).toEqual([]);
     }
   });
 
@@ -79,7 +79,7 @@ describe('profileFit', () => {
     });
     it('passes the forbidden-word check', () => {
       for (const st of profileFit(profile, { currency: 'EUR', monthly: monthly(96, 0.005) })) {
-        expect(st.text).not.toMatch(FORBIDDEN);
+        expect(findBannedWords(st.text)).toEqual([]);
       }
     });
   });
