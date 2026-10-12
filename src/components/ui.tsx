@@ -269,7 +269,8 @@ const hashIs = (id: string | undefined) => !!id && typeof window !== 'undefined'
 
 /**
  * Collapsible block on <details>/<summary>: native keyboard support, state exposed to assistive tech.
- * The heading sits inside the summary so heading navigation lists it even when collapsed.
+ * Screen readers (VoiceOver especially) flatten a heading inside <summary> into the button name, so sections get
+ * a visually hidden heading just before the <details>: heading navigation lists it even when collapsed.
  * A link or hash pointing at `id` opens it; `forceOpen` opens it when something inside needs attention.
  */
 export function Disclosure({
@@ -324,30 +325,33 @@ export function Disclosure({
   const sub = variant === 'sub';
   const titleCls = sub ? 'col-start-1 text-sm font-medium' : 'col-start-1 text-lg font-semibold tracking-tight';
   return (
-    <details
-      id={id}
-      open={open}
-      onToggle={(e) => setOpen(e.currentTarget.open)}
-      className={cx('scroll-mt-28 border border-line bg-surface', sub ? 'mt-3 rounded-xl' : 'card mt-8 rounded-2xl', className)}
-    >
-      <summary
-        className={cx(
-          'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5',
-          sub ? 'min-h-11 rounded-xl' : 'min-h-14 rounded-2xl',
-        )}
+    <>
+      {!sub && <h2 className="sr-only">{title}</h2>}
+      <details
+        id={id}
+        open={open}
+        onToggle={(e) => setOpen(e.currentTarget.open)}
+        className={cx('scroll-mt-28 border border-line bg-surface', sub ? 'mt-3 rounded-xl' : 'card mt-8 rounded-2xl', className)}
       >
-        {sub ? <span className={titleCls}>{title}</span> : <h2 className={titleCls}>{title}</h2>}
-        {preview && !open && <span className="col-start-1 block text-sm text-muted">{preview}</span>}
-        <svg
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-          className={cx('col-start-2 row-span-2 row-start-1 h-5 w-5 text-muted transition-transform motion-reduce:transition-none', open && 'rotate-180')}
+        <summary
+          className={cx(
+            'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5',
+            sub ? 'min-h-11 rounded-xl' : 'min-h-14 rounded-2xl',
+          )}
         >
-          <path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </summary>
-      <div className="px-4 pb-4">{children}</div>
-    </details>
+          <span className={titleCls}>{title}</span>
+          {preview && !open && <span className="col-start-1 block text-sm text-muted">{preview}</span>}
+          <svg
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+            className={cx('col-start-2 row-span-2 row-start-1 h-5 w-5 text-muted transition-transform motion-reduce:transition-none', open && 'rotate-180')}
+          >
+            <path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </summary>
+        <div className="px-4 pb-4">{children}</div>
+      </details>
+    </>
   );
 }
 

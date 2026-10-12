@@ -128,6 +128,8 @@ function PeriodDetail({ title, sim, side, tax }: { title: string; sim: SimResult
   const showGross = fmtEur(sim.grossValue) !== fmtEur(sim.netValue);
   const showFees = !(entry || exit) || Math.round(feeTotal) !== 0;
   const extra = showGross || showFees || sim.dividendsEur !== undefined || !!sim.fx;
+  // Nothing beyond the headline net value: no empty sub-heading
+  if (!extra && !tax && !isForeign(side)) return null;
   return (
     <div>
       <h4 className="text-sm font-medium">{title}</h4>
@@ -189,6 +191,7 @@ export function EuroVerdict({
   fund,
   reference,
   referenceLabel,
+  referenceNote,
   taxCountry,
   fxCost = DEFAULT_FX_COST,
   onFxCost,
@@ -200,6 +203,8 @@ export function EuroVerdict({
   /** Undefined when no reference is chosen or it has no data */
   reference: EuroSide | undefined;
   referenceLabel?: string;
+  /** Shown instead of the reference card when there is nothing to compare (e.g. the reference is the instrument itself) */
+  referenceNote?: string;
   taxCountry?: TaxCountry;
   /** Spread per currency conversion, fraction */
   fxCost?: number;
@@ -256,7 +261,11 @@ export function EuroVerdict({
       )}
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Headlines title="Questo strumento" c={fundCalc} />
-        <Headlines title={refTitle} c={refCalc} />
+        {refCalc || !referenceNote ? (
+          <Headlines title={refTitle} c={refCalc} />
+        ) : (
+          <p className="rounded-2xl border border-dashed border-line bg-surface p-4 text-sm text-muted">{referenceNote}</p>
+        )}
       </div>
       <p className="mt-3 text-xs text-muted">
         Simulazione sui prezzi storici: i risultati passati non indicano quelli futuri.
@@ -309,7 +318,7 @@ export function EuroVerdict({
       <Disclosure variant="sub" title="Dettaglio del calcolo">
         <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
           <SideDetail title="Questo strumento" c={fundCalc} />
-          <SideDetail title={refTitle} c={refCalc} />
+          {(refCalc || !referenceNote) && <SideDetail title={refTitle} c={refCalc} />}
         </div>
         {unconverted.length > 0 && (
           <p className="mt-4 text-xs text-muted">Cambio {unconverted.map((c) => `EUR/${fxCurrency(c)}`).join(', ')}: {NA}. Valori nella valuta di quotazione ({unconverted.join(', ')}): conversione non inclusa</p>

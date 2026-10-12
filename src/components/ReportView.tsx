@@ -115,7 +115,7 @@ function Figure({
 }) {
   const na = !/\d/.test(value);
   return (
-    <div className="card flex flex-col rounded-2xl border border-line bg-surface p-3 sm:p-3.5">
+    <div className="card flex flex-col rounded-2xl border border-line bg-surface p-2.5 sm:p-3.5">
       <dt className="flex items-start justify-between gap-1 text-sm leading-snug text-muted">
         <span className="pt-0.5">{label}</span>
         {tip && (
@@ -126,18 +126,18 @@ function Figure({
       </dt>
       <dd
         className={cx(
-          'mt-auto pt-1 tabular-nums',
-          na ? 'text-base font-medium text-muted' : cx('text-2xl font-semibold leading-tight tracking-tight sm:text-[1.75rem]', TONE_TEXT[tone]),
+          'mt-auto pt-0.5 tabular-nums sm:pt-1',
+          na ? 'text-base font-medium text-muted' : cx('text-xl font-semibold leading-tight tracking-tight sm:text-[1.75rem]', TONE_TEXT[tone]),
         )}
       >
         {value}
       </dd>
       {badge && !na && (
-        <dd className="mt-1.5">
+        <dd className="mt-1 sm:mt-1.5">
           <TonePill tone={tone}>{badge}</TonePill>
         </dd>
       )}
-      {note && <dd className="mt-1 text-xs text-muted">{note}</dd>}
+      {note && <dd className="mt-0.5 text-xs text-muted sm:mt-1">{note}</dd>}
     </div>
   );
 }
@@ -266,13 +266,26 @@ export function ReportView({ symbol }: { symbol: string }) {
     [fit, report, profile],
   );
 
-  // A link such as /report/X#h-comp lands before the content exists: scroll once it has rendered
+  // A link such as /report/X#h-comp lands before the content exists: scroll once it has rendered,
+  // and again when the AI summary settles (it may collapse and shift the page) unless the user has scrolled since
   const scrolledFor = useRef<string | null>(null);
+  const hashTarget = useRef<string | null>(null);
+  const scrollToHash = () => {
+    if (hashTarget.current) document.getElementById(hashTarget.current)?.scrollIntoView();
+  };
   useEffect(() => {
     if (!report || !profile || scrolledFor.current === symbol) return;
     scrolledFor.current = symbol;
     const target = decodeURIComponent(window.location.hash.slice(1));
-    if (target) requestAnimationFrame(() => document.getElementById(target)?.scrollIntoView());
+    if (!target) return;
+    hashTarget.current = target;
+    const stop = () => {
+      hashTarget.current = null;
+      for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown']) window.removeEventListener(ev, stop);
+    };
+    for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown']) window.addEventListener(ev, stop, { passive: true });
+    setTimeout(stop, 8000);
+    requestAnimationFrame(scrollToHash);
   }, [report, profile, symbol]);
 
   if (!profile) return <ReportSkeleton />;
@@ -496,7 +509,9 @@ export function ReportView({ symbol }: { symbol: string }) {
             <dl className={cx('mt-3 grid grid-cols-2 gap-2', figureCols, '[&>*:last-child:nth-child(odd)]:max-lg:col-span-2')}>{figures}</dl>
             {(refName || needsChoice) && (
               <p className="mt-3 text-sm text-muted">
-                {refName ? (
+                {sameAsBench ? (
+                  'Nessun confronto: lo strumento coincide con il riferimento scelto'
+                ) : refName ? (
                   <>
                     Confrontato con: <span className="font-medium text-ink">{refName}</span>
                     {benchOk ? ` (${benchOk.profile.symbol})` : ''}
@@ -512,7 +527,7 @@ export function ReportView({ symbol }: { symbol: string }) {
             )}
           </section>
 
-          <AiSummary report={report} fit={fit} level={level} />
+          <AiSummary report={report} fit={fit} level={level} onSettle={scrollToHash} />
 
           <Section id="h-bench" title="Andamento rispetto al riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
             <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
@@ -557,7 +572,7 @@ export function ReportView({ symbol }: { symbol: string }) {
               id="h-pick"
               variant="sub"
               title="Cambia riferimento"
-              preview={benchOk ? `${refName} (${benchOk.profile.symbol})` : 'Scegli un riferimento'}
+              preview={sameAsBench ? 'Lo strumento stesso: scegline un altro' : benchOk ? `${refName} (${benchOk.profile.symbol})` : 'Scegli un riferimento'}
               forceOpen={needsChoice || !benchOk || !!benchMsg}
               className="mt-4"
             >
@@ -674,12 +689,13 @@ export function ReportView({ symbol }: { symbol: string }) {
                 ? { prices: benchSeries, fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
                 : undefined
             }
-            referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+            referenceLabel={benchOk && !sameAsBench ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+            referenceNote={sameAsBench ? 'Il riferimento scelto è lo strumento stesso: scegli un altro riferimento per vedere il confronto.' : undefined}
           />
         </div>
 
         <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <div className="lg:sticky lg:top-20">
+          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:-m-1 lg:p-1">
             <Disclosure id="h-fit" title="Rispetto al tuo profilo" preview={tones.length > 0 ? <FitTally tones={tones} /> : undefined} openOnDesktop className="lg:mt-0">
               <div className="-mt-1 mb-3 flex flex-wrap items-center justify-between gap-x-3">
                 <p className="text-sm text-muted">
@@ -860,6 +876,18 @@ export function ReportView({ symbol }: { symbol: string }) {
 /** Quick-jump chips for phones, shown once the "In breve" card has scrolled out of view. */
 function JumpNav({ items }: { items: { href: string; label: string }[] }) {
   const [show, setShow] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
+  // Fade the edge(s) where more chips are hidden, so the row reads as scrollable
+  const [edges, setEdges] = useState({ start: false, end: false });
+  const measure = () => {
+    const el = listRef.current;
+    if (el) setEdges({ start: el.scrollLeft > 4, end: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+  };
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [show]);
   useEffect(() => {
     const onScroll = () => setShow(window.scrollY > 420);
     onScroll();
@@ -872,10 +900,17 @@ function JumpNav({ items }: { items: { href: string; label: string }[] }) {
         aria-label="Sezioni del report"
         className={cx('absolute -inset-x-4 top-0 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:-inset-x-6 sm:px-6', !show && 'hidden')}
       >
-        <ul className="flex gap-1.5 overflow-x-auto py-1">
+        <ul
+          ref={listRef}
+          onScroll={measure}
+          className="flex gap-0.5 overflow-x-auto py-1"
+          style={{
+            maskImage: `linear-gradient(to right, ${edges.start ? 'transparent, #000 1.5rem' : '#000, #000'}, ${edges.end ? '#000 calc(100% - 1.5rem), transparent' : '#000, #000'})`,
+          }}
+        >
           {items.map((it) => (
             <li key={it.href} className="shrink-0">
-              <a href={it.href} className="pressable inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-accent hover:bg-accent-soft">
+              <a href={it.href} className="pressable inline-flex min-h-11 items-center rounded-full px-2.5 text-sm font-medium text-accent hover:bg-accent-soft">
                 {it.label}
               </a>
             </li>
