@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Suspense } from 'react';
 import { useInvestorProfile } from '@/lib/profileStore';
+import { SettingsMenu } from './SettingsMenu';
 import { cx } from './ui';
 
 const TABS = [
@@ -41,9 +42,12 @@ export function TopBar() {
           </span>
           Analisi Strumento
         </Link>
-        <Suspense fallback={null}>
-          <DesktopNav />
-        </Suspense>
+        <div className="flex items-center gap-1">
+          <Suspense fallback={null}>
+            <DesktopNav />
+          </Suspense>
+          <SettingsMenu />
+        </div>
       </div>
     </header>
   );

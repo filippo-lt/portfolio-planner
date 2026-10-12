@@ -35,40 +35,39 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d0e14;
-    --surface: #171923;
-    --surface-2: #20232f;
-    --border: #2a2d3a;
-    --border-strong: #6d7184;
-    --text: #ececf3;
-    --muted: #a2a6b8;
-    --accent: #8b85ff;
-    --accent-hover: #a5a0ff;
-    --accent-fg: #0d0e14;
-    --accent-soft: #24224a;
-    --accent-2: #b48cff;
-    --success: #5fd68f;
-    --success-soft: #12301f;
-    --success-line: #24653d;
-    --warn: #f6b856;
-    --warn-soft: #362611;
-    --warn-line: #7a5320;
-    --error: #ff8a80;
-    --error-soft: #3a1714;
-    --error-line: #7d302a;
-    --chart-a: #8b85ff;
-    --chart-b: #f6a54a;
-    --grid: #252836;
-    --bar-1: #8b85ff;
-    --bar-2: #2dd4bf;
-    --bar-3: #f6a54a;
-    --bar-4: #f472b6;
-    --bar-5: #4ade80;
-    --bar-6: #b48cff;
-    color-scheme: dark;
-  }
+/* data-theme is set pre-paint by THEME_SCRIPT (src/lib/theme.ts) from the saved choice or the OS */
+:root[data-theme="dark"] {
+  --bg: #0d0e14;
+  --surface: #171923;
+  --surface-2: #20232f;
+  --border: #2a2d3a;
+  --border-strong: #6d7184;
+  --text: #ececf3;
+  --muted: #a2a6b8;
+  --accent: #8b85ff;
+  --accent-hover: #a5a0ff;
+  --accent-fg: #0d0e14;
+  --accent-soft: #24224a;
+  --accent-2: #b48cff;
+  --success: #5fd68f;
+  --success-soft: #12301f;
+  --success-line: #24653d;
+  --warn: #f6b856;
+  --warn-soft: #362611;
+  --warn-line: #7a5320;
+  --error: #ff8a80;
+  --error-soft: #3a1714;
+  --error-line: #7d302a;
+  --chart-a: #8b85ff;
+  --chart-b: #f6a54a;
+  --grid: #252836;
+  --bar-1: #8b85ff;
+  --bar-2: #2dd4bf;
+  --bar-3: #f6a54a;
+  --bar-4: #f472b6;
+  --bar-5: #4ade80;
+  --bar-6: #b48cff;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -118,9 +117,7 @@ body {
 .card {
   box-shadow: 0 1px 2px rgb(20 20 15 / 0.04), 0 2px 8px -2px rgb(20 20 15 / 0.05);
 }
-@media (prefers-color-scheme: dark) {
-  .card { box-shadow: none; }
-}
+[data-theme="dark"] .card { box-shadow: none; }
 
 /* Primary CTA: vivid gradient so the main action is unmistakable */
 .btn-primary {
@@ -128,9 +125,7 @@ body {
   box-shadow: 0 1px 2px rgb(40 30 120 / 0.18), 0 6px 16px -6px rgb(79 70 229 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.15);
 }
 .btn-primary:hover { filter: brightness(1.06); }
-@media (prefers-color-scheme: dark) {
-  .btn-primary { box-shadow: 0 6px 18px -8px rgb(139 133 255 / 0.6); }
-}
+[data-theme="dark"] .btn-primary { box-shadow: 0 6px 18px -8px rgb(139 133 255 / 0.6); }
 
 /* Native-feeling press feedback */
 .pressable {
