@@ -3,7 +3,10 @@ import { parseBenchmarkPrefs, parseProfile } from '../profileStore';
 
 describe('parseBenchmarkPrefs', () => {
   it('reads the per-class shape', () => {
-    expect(parseBenchmarkPrefs('{"equity":"VWCE.DE","bond":"AGGH.MI"}')).toEqual({ equity: 'VWCE.DE', bond: 'AGGH.MI' });
+    expect(parseBenchmarkPrefs('{"equity":"VWCE.DE","bond":"AGGH.MI"}')).toEqual({
+      equity: 'VWCE.DE',
+      bond: 'AGGH.MI',
+    });
   });
   it('reads the legacy {symbol, assetClass} shape into its class slot', () => {
     expect(parseBenchmarkPrefs('{"symbol":"AGGH.MI","assetClass":"bond"}')).toEqual({ bond: 'AGGH.MI' });
@@ -21,7 +24,14 @@ describe('parseBenchmarkPrefs', () => {
 });
 
 describe('parseProfile tax country', () => {
-  const base = { age: 40, horizonYears: 10, retirementAge: 67, netWorthEur: 50000, maxDrawdownPct: 20, knowledge: 'base' };
+  const base = {
+    age: 40,
+    horizonYears: 10,
+    retirementAge: 67,
+    netWorthEur: 50000,
+    maxDrawdownPct: 20,
+    knowledge: 'base',
+  };
   it('loads an old profile saved without taxCountry', () => {
     const p = parseProfile(JSON.stringify({ v: 1, profile: base }));
     expect(p).not.toBeNull();

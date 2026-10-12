@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { chartGap, annualizedReturn, annualizedVolatility, maxDrawdown, monthlyCloses, rebase, rollingReturnRange } from '../metrics';
+import {
+  chartGap,
+  annualizedReturn,
+  annualizedVolatility,
+  maxDrawdown,
+  monthlyCloses,
+  rebase,
+  rollingReturnRange,
+} from '../metrics';
 import type { PricePoint } from '../data/types';
 
 function series(n: number, f: (i: number) => number, end = '2025-01-01'): PricePoint[] {
@@ -19,7 +27,12 @@ describe('annualizedReturn', () => {
     expect(r).toBeLessThan(1.01);
   });
   it('is undefined if history too short', () => {
-    expect(annualizedReturn(series(100, () => 100), 1)).toBeUndefined();
+    expect(
+      annualizedReturn(
+        series(100, () => 100),
+        1,
+      ),
+    ).toBeUndefined();
     expect(annualizedReturn([], 1)).toBeUndefined();
   });
 });
@@ -118,8 +131,12 @@ describe('chartGap', () => {
     );
   });
   it('uses years and months, never rounding up to the next year', () => {
-    expect(chartGap([pt('2020-01-01', 100, 100), pt('2024-08-15', 110, 105)], 'A', 'B')).toContain('In 4 anni e 7 mesi A');
-    expect(chartGap([pt('2023-01-01', 100, 100), pt('2024-02-01', 110, 105)], 'A', 'B')).toContain('In 1 anno e 1 mese A');
+    expect(chartGap([pt('2020-01-01', 100, 100), pt('2024-08-15', 110, 105)], 'A', 'B')).toContain(
+      'In 4 anni e 7 mesi A',
+    );
+    expect(chartGap([pt('2023-01-01', 100, 100), pt('2024-02-01', 110, 105)], 'A', 'B')).toContain(
+      'In 1 anno e 1 mese A',
+    );
     expect(chartGap([pt('2024-01-01', 100, 100), pt('2024-09-01', 110, 105)], 'A', 'B')).toContain('In 8 mesi A');
   });
   it('uses singular for one year', () => {

@@ -16,7 +16,8 @@ export interface EffectiveFees {
 
 export const MAX_FEE_PCT = 10;
 
-const valid = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= MAX_FEE_PCT / 100;
+const valid = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= MAX_FEE_PCT / 100;
 
 /** Keeps only valid fractions from untrusted stored data. */
 export function parseUserFees(o: unknown): UserFees {
@@ -28,10 +29,15 @@ export function parseUserFees(o: unknown): UserFees {
 }
 
 /** Data values win; a user value fills a gap only. Nothing is estimated. */
-export function effectiveFees(profile: Pick<InstrumentProfile, 'entryFee' | 'exitFee' | 'performanceFee'>, userFees: UserFees = {}): EffectiveFees {
+export function effectiveFees(
+  profile: Pick<InstrumentProfile, 'entryFee' | 'exitFee' | 'performanceFee'>,
+  userFees: UserFees = {},
+): EffectiveFees {
   const out: EffectiveFees = {};
-  const entry = profile.entryFee ?? (valid(userFees.entry) ? { value: userFees.entry, source: 'user' as const } : undefined);
-  const exit = profile.exitFee ?? (valid(userFees.exit) ? { value: userFees.exit, source: 'user' as const } : undefined);
+  const entry =
+    profile.entryFee ?? (valid(userFees.entry) ? { value: userFees.entry, source: 'user' as const } : undefined);
+  const exit =
+    profile.exitFee ?? (valid(userFees.exit) ? { value: userFees.exit, source: 'user' as const } : undefined);
   if (entry) out.entry = entry;
   if (exit) out.exit = exit;
   if (profile.performanceFee) out.performance = profile.performanceFee;

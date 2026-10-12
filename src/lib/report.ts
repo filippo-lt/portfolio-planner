@@ -166,11 +166,27 @@ export async function buildShareEuro(symbol: string): Promise<ShareEuro> {
   try {
     const [instrument, prices] = await Promise.all([profileOf(symbol), historyOf(symbol)]);
     if (instrument.currency !== 'EUR' || prices.length < 2) return { final: true };
-    const dist = instrument.distribution === 'dist' ? await loadDistData(symbol, prices.map((p) => p.date)) : undefined;
+    const dist =
+      instrument.distribution === 'dist'
+        ? await loadDistData(
+            symbol,
+            prices.map((p) => p.date),
+          )
+        : undefined;
     const fees = effectiveFees(instrument);
-    const sim = simulate({ amount: DEFAULT_SIM_AMOUNT, prices, entryFee: fees.entry?.value, exitFee: fees.exit?.value, rawPrices: dist?.raw, dividends: dist?.dividends });
+    const sim = simulate({
+      amount: DEFAULT_SIM_AMOUNT,
+      prices,
+      entryFee: fees.entry?.value,
+      exitFee: fees.exit?.value,
+      rawPrices: dist?.raw,
+      dividends: dist?.dividends,
+    });
     if (!sim) return { final: true };
-    return { line: `${fmtEur(DEFAULT_SIM_AMOUNT)} → ${fmtEur(sim.netValue)} (${monthYear(sim.startDate)} – ${monthYear(sim.endDate)}, dati storici, al lordo delle imposte)`, final: true };
+    return {
+      line: `${fmtEur(DEFAULT_SIM_AMOUNT)} → ${fmtEur(sim.netValue)} (${monthYear(sim.startDate)} – ${monthYear(sim.endDate)}, dati storici, al lordo delle imposte)`,
+      final: true,
+    };
   } catch {
     return { final: false };
   }
@@ -200,7 +216,8 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
       }
       const mismatch = classMismatch(instrument.assetClass, benchmarkClass(bProfile));
       classNote = mismatch;
-      if (chart.length === 0) notes.push('Nessuna data in comune tra strumento e benchmark: grafico Dato non disponibile.');
+      if (chart.length === 0)
+        notes.push('Nessuna data in comune tra strumento e benchmark: grafico Dato non disponibile.');
     } catch {
       benchmark = { symbol: benchmarkSymbol, error: 'Benchmark non trovato o dati non disponibili' };
     }
@@ -209,7 +226,9 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
   const monthly = monthlyCloses(prices);
   const chartDates = chart.map((p) => p.date);
   const [instDist, benchDist] = await Promise.all([
-    instrument.distribution === 'dist' ? loadDistData(symbol, chartDates.length > 0 ? chartDates : monthly.map((p) => p.date)) : undefined,
+    instrument.distribution === 'dist'
+      ? loadDistData(symbol, chartDates.length > 0 ? chartDates : monthly.map((p) => p.date))
+      : undefined,
     'profile' in benchmark && benchmark.profile.distribution === 'dist' && chartDates.length > 0
       ? loadDistData(benchmark.profile.symbol, chartDates)
       : undefined,

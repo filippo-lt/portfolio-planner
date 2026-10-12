@@ -39,13 +39,18 @@ export function validateProfile(f: ProfileForm): { profile?: InvestorProfile; er
   const worth = dec(f.netWorthEur);
   const dd = dec(f.maxDrawdownPct);
   if (!Number.isFinite(age) || age < 18 || age > 100) errors.age = "Inserisci un'età intera tra 18 e 100.";
-  if (!Number.isFinite(horizon) || horizon < 1 || horizon > 80) errors.horizonYears = 'Inserisci un numero intero di anni tra 1 e 80.';
-  if (!Number.isFinite(retire) || retire < 30 || retire > 100) errors.retirementAge = "Inserisci un'età intera tra 30 e 100.";
-  else if (!errors.age && retire < age) errors.retirementAge = "L'età di pensionamento non può essere inferiore all'età attuale.";
-  if (!Number.isFinite(worth) || worth > 1e10) errors.netWorthEur = 'Inserisci un importo in euro maggiore o uguale a 0 (solo cifre).';
-  if (!Number.isFinite(dd) || dd < 1 || dd > 99) errors.maxDrawdownPct = 'Inserisci una percentuale tra 1 e 99 (solo cifre).';
+  if (!Number.isFinite(horizon) || horizon < 1 || horizon > 80)
+    errors.horizonYears = 'Inserisci un numero intero di anni tra 1 e 80.';
+  if (!Number.isFinite(retire) || retire < 30 || retire > 100)
+    errors.retirementAge = "Inserisci un'età intera tra 30 e 100.";
+  else if (!errors.age && retire < age)
+    errors.retirementAge = "L'età di pensionamento non può essere inferiore all'età attuale.";
+  if (!Number.isFinite(worth) || worth > 1e10)
+    errors.netWorthEur = 'Inserisci un importo in euro maggiore o uguale a 0 (solo cifre).';
+  if (!Number.isFinite(dd) || dd < 1 || dd > 99)
+    errors.maxDrawdownPct = 'Inserisci una percentuale tra 1 e 99 (solo cifre).';
   if (!f.knowledge) errors.knowledge = 'Seleziona un livello.';
-  if (f.taxCountry && !isTaxCountry(f.taxCountry)) errors.taxCountry = 'Seleziona un paese dall\'elenco.';
+  if (f.taxCountry && !isTaxCountry(f.taxCountry)) errors.taxCountry = "Seleziona un paese dall'elenco.";
   if (Object.keys(errors).length) return { errors };
   return {
     errors,
@@ -67,7 +72,13 @@ export function profileWarnings(f: ProfileForm): string[] {
   const horizon = int(f.horizonYears);
   const retire = int(f.retirementAge);
   const out: string[] = [];
-  if (Number.isFinite(age) && Number.isFinite(horizon) && Number.isFinite(retire) && retire > age && horizon > retire - age) {
+  if (
+    Number.isFinite(age) &&
+    Number.isFinite(horizon) &&
+    Number.isFinite(retire) &&
+    retire > age &&
+    horizon > retire - age
+  ) {
     out.push(
       `L'orizzonte indicato (${horizon} anni) è maggiore degli anni che mancano all'età di pensionamento indicata (${retire - age}). Il profilo può essere salvato comunque.`,
     );

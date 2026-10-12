@@ -29,7 +29,6 @@ function withTimeout(p: Promise<any>, ms = TIMEOUT_MS): Promise<any> {
 }
 const LOOSE = { validateResult: false };
 
-
 const FIGI_EXCH_SUFFIX: Record<string, string> = {
   GY: '.DE',
   GR: '.DE',
@@ -63,11 +62,9 @@ const SECTOR_LABELS: Record<string, string> = {
 
 const MIN_STOCK_SHARE = 0.1;
 
-const num = (v: unknown): number | undefined =>
-  typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 
-const str = (v: unknown): string | undefined =>
-  typeof v === 'string' && v.trim() ? v.trim() : undefined;
+const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 
 function mapType(quoteType: unknown): InstrumentType | undefined {
   if (quoteType === 'ETF') return 'ETF';
@@ -217,7 +214,9 @@ export class YahooProvider implements DataProvider {
       // placeholder values (e.g. 100% real estate), so skip them when there is almost no equity.
       const stockShare = num(s?.topHoldings?.stockPosition);
       const sectors: Allocation[] = [];
-      for (const row of stockShare !== undefined && stockShare < MIN_STOCK_SHARE ? [] : (s?.topHoldings?.sectorWeightings ?? [])) {
+      for (const row of stockShare !== undefined && stockShare < MIN_STOCK_SHARE
+        ? []
+        : (s?.topHoldings?.sectorWeightings ?? [])) {
         for (const [k, v] of Object.entries(row)) {
           const w = num(v);
           if (w) sectors.push({ name: SECTOR_LABELS[k] ?? k, weight: w });

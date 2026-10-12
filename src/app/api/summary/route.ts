@@ -56,7 +56,11 @@ function slimMetrics(m: any) {
     volatility: pickNum(m?.volatility),
     volatilityYears: pickNum(m?.volatilityYears),
     maxDrawdown: m?.maxDrawdown
-      ? { value: pickNum(m.maxDrawdown.value), peakDate: pickStr(m.maxDrawdown.peakDate, 10), troughDate: pickStr(m.maxDrawdown.troughDate, 10) }
+      ? {
+          value: pickNum(m.maxDrawdown.value),
+          peakDate: pickStr(m.maxDrawdown.peakDate, 10),
+          troughDate: pickStr(m.maxDrawdown.troughDate, 10),
+        }
       : undefined,
     historyStart: pickStr(m?.historyStart, 10),
     historyEnd: pickStr(m?.historyEnd, 10),
@@ -76,7 +80,9 @@ function slimReport(report: any) {
       exchange: pickStr(i.exchange, 40),
       isin: pickStr(i.isin, 12),
       ter: pickNum(i.ter),
-      holdings: Array.isArray(i.holdings) ? i.holdings.slice(0, 10).map((h: any) => ({ name: pickStr(h?.name), weight: pickNum(h?.weight) })) : undefined,
+      holdings: Array.isArray(i.holdings)
+        ? i.holdings.slice(0, 10).map((h: any) => ({ name: pickStr(h?.name), weight: pickNum(h?.weight) }))
+        : undefined,
       sectors: pickList(i.sectors),
       countries: pickList(i.countries),
       sector: pickStr(i.sector),
@@ -126,7 +132,8 @@ export async function POST(req: Request) {
   let body: any;
   try {
     const text = await req.text();
-    if (Buffer.byteLength(text, 'utf8') > MAX_BODY) return NextResponse.json({ error: 'Richiesta troppo grande' }, { status: 413 });
+    if (Buffer.byteLength(text, 'utf8') > MAX_BODY)
+      return NextResponse.json({ error: 'Richiesta troppo grande' }, { status: 413 });
     body = JSON.parse(text);
   } catch {
     return NextResponse.json({ error: 'Richiesta non valida' }, { status: 400 });
@@ -142,7 +149,9 @@ export async function POST(req: Request) {
   };
   const payload = JSON.stringify(input);
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-  const key = `summary:${createHash('sha1').update(model + payload).digest('hex')}`;
+  const key = `summary:${createHash('sha1')
+    .update(model + payload)
+    .digest('hex')}`;
 
   const hit = await cacheGet<string>(key);
   if (hit) return NextResponse.json({ summary: hit });

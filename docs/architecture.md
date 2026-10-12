@@ -191,11 +191,11 @@ stateDiagram-v2
 
 ## 6. Tech stack
 
-| Concern | Choice |
-|---|---|
-| Framework | Next.js 16 (App Router, `cacheComponents`), React 19, TypeScript |
-| Styling | Tailwind CSS 4, light theme, neutral slate/blue palette |
-| Charts | Recharts |
-| Market data | `yahoo-finance2` v4 (unofficial) + OpenFIGI REST |
-| LLM | `@anthropic-ai/sdk`, model `ANTHROPIC_MODEL` (default `claude-haiku-5-5`) |
-| Tests | Vitest |
+| Concern     | Choice                                                                    |
+| ----------- | ------------------------------------------------------------------------- |
+| Framework   | Next.js 16 (App Router, `cacheComponents`), React 19, TypeScript          |
+| Styling     | Tailwind CSS 4, light theme, neutral slate/blue palette                   |
+| Charts      | Recharts                                                                  |
+| Market data | `yahoo-finance2` v4 (unofficial) + OpenFIGI REST                          |
+| LLM         | `@anthropic-ai/sdk`, model `ANTHROPIC_MODEL` (default `claude-haiku-5-5`) |
+| Tests       | Vitest                                                                    |

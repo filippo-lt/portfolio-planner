@@ -1,7 +1,8 @@
 /** Brand constants and marks shared by the generated icons and share images (next/og). */
 
 export const SITE_NAME = 'Analisi Strumento';
-export const SITE_DESCRIPTION = 'Dati e confronti numerici su ETF, fondi e azioni rispetto al tuo profilo di investitore.';
+export const SITE_DESCRIPTION =
+  'Dati e confronti numerici su ETF, fondi e azioni rispetto al tuo profilo di investitore.';
 
 /** Shared Open Graph fields: a route's `openGraph` replaces the parent's instead of merging. */
 export const BASE_OPEN_GRAPH = { type: 'website', siteName: SITE_NAME, locale: 'it_IT' } as const;
@@ -23,7 +24,14 @@ export function siteUrl(): URL {
 export function TrendMark({ size, color = '#fff' }: { size: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32">
-      <path d="M7 21.5l5.5-5.5 4 4L24.5 12" fill="none" stroke={color} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M7 21.5l5.5-5.5 4 4L24.5 12"
+        fill="none"
+        stroke={color}
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <circle cx="24.5" cy="12" r="2.4" fill={color} />
     </svg>
   );

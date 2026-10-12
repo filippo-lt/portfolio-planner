@@ -27,4 +27,5 @@ const RULES: Partial<Record<TaxCountry, TaxRules>> = {
 };
 
 /** Undefined when the country has no rules yet: callers show "Tasse non incluse". */
-export const taxRulesFor = (country: TaxCountry | undefined): TaxRules | undefined => (country ? RULES[country] : undefined);
+export const taxRulesFor = (country: TaxCountry | undefined): TaxRules | undefined =>
+  country ? RULES[country] : undefined;

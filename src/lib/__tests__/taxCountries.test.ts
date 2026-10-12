@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { taxRulesFor } from '../tax';
 
-const est = (c: 'ES' | 'DE' | 'FR' | 'UK', input: Parameters<NonNullable<ReturnType<typeof taxRulesFor>>['estimate']>[0]) => taxRulesFor(c)!.estimate(input);
+const est = (
+  c: 'ES' | 'DE' | 'FR' | 'UK',
+  input: Parameters<NonNullable<ReturnType<typeof taxRulesFor>>['estimate']>[0],
+) => taxRulesFor(c)!.estimate(input);
 
 describe('Spain', () => {
   it('taxes 5.000 € at 19%', () => expect(est('ES', { gain: 5000, type: 'ETF' }).high).toBeCloseTo(950));
@@ -10,8 +13,10 @@ describe('Spain', () => {
     expect(t.low).toBeCloseTo(1980);
     expect(t.high).toBeCloseTo(1980);
   });
-  it('250.000 € = 1.140 + 9.240 + 34.500 + 13.500', () => expect(est('ES', { gain: 250000, type: 'ETF' }).high).toBeCloseTo(1140 + 9240 + 34500 + 13500));
-  it('350.000 € adds 30% above 300.000 €', () => expect(est('ES', { gain: 350000, type: 'ETF' }).high).toBeCloseTo(1140 + 9240 + 34500 + 27000 + 15000));
+  it('250.000 € = 1.140 + 9.240 + 34.500 + 13.500', () =>
+    expect(est('ES', { gain: 250000, type: 'ETF' }).high).toBeCloseTo(1140 + 9240 + 34500 + 13500));
+  it('350.000 € adds 30% above 300.000 €', () =>
+    expect(est('ES', { gain: 350000, type: 'ETF' }).high).toBeCloseTo(1140 + 9240 + 34500 + 27000 + 15000));
   it('is 0 on a loss and states the single-income assumption', () => {
     const t = est('ES', { gain: -500, type: 'ETF' });
     expect(t.high).toBe(0);
@@ -25,12 +30,14 @@ describe('Germany', () => {
     expect(t.low).toBeCloseTo(184.625);
     expect(t.high).toBeCloseTo(184.625);
   });
-  it('mixed fund: 15% exempt', () => expect(est('DE', { gain: 1000, type: 'ETF', assetClass: 'mixed' }).high).toBeCloseTo(224.1875));
+  it('mixed fund: 15% exempt', () =>
+    expect(est('DE', { gain: 1000, type: 'ETF', assetClass: 'mixed' }).high).toBeCloseTo(224.1875));
   it('bond and other: no exemption', () => {
     expect(est('DE', { gain: 1000, type: 'ETF', assetClass: 'bond' }).high).toBeCloseTo(263.75);
     expect(est('DE', { gain: 1000, type: 'ETF', assetClass: 'other' }).high).toBeCloseTo(263.75);
   });
-  it('single stock: no exemption', () => expect(est('DE', { gain: 1000, type: 'STOCK', assetClass: 'equity' }).high).toBeCloseTo(263.75));
+  it('single stock: no exemption', () =>
+    expect(est('DE', { gain: 1000, type: 'STOCK', assetClass: 'equity' }).high).toBeCloseTo(263.75));
   it('unknown class: range 0-30% exempt', () => {
     const t = est('DE', { gain: 1000, type: 'FUND' });
     expect(t.low).toBeCloseTo(184.625);

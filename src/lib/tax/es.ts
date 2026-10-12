@@ -27,10 +27,12 @@ export function estimateEsTax({ gain, distributing }: TaxInput): TaxEstimate {
   const tax = gain > 0 ? progressive(gain) : 0;
   const label = ES_BRACKETS.map((b, i) => {
     const prev = i === 0 ? 0 : ES_BRACKETS[i - 1].upTo;
-    return b.upTo === Infinity ? `${pctText(b.rate)} oltre ${eurText(prev)}` : `${pctText(b.rate)} fino a ${eurText(b.upTo)}`;
+    return b.upTo === Infinity
+      ? `${pctText(b.rate)} oltre ${eurText(prev)}`
+      : `${pctText(b.rate)} fino a ${eurText(b.upTo)}`;
   }).join(', ');
   const notes = [
-    'Calcolato come se fosse l\'unico reddito da risparmio dell\'anno.',
+    "Calcolato come se fosse l'unico reddito da risparmio dell'anno.",
     'Le minusvalenze possono compensare le plusvalenze: non considerato.',
   ];
   if (distributing) notes.push(DIST_TAX_NOTE);

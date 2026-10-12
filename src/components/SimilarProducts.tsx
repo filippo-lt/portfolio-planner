@@ -10,12 +10,26 @@ import { SIMILAR_RULE, fundPeriods, type SimilarItem } from '@/lib/similar';
 
 const feeText = (v: number | undefined) => (v === undefined ? 'non inclusa' : fmtPct(v, 2));
 
-function Outcome({ label, amount, ratio, item }: { label: string; amount: number; ratio: number | undefined; item: SimilarItem }) {
+function Outcome({
+  label,
+  amount,
+  ratio,
+  item,
+}: {
+  label: string;
+  amount: number;
+  ratio: number | undefined;
+  item: SimilarItem;
+}) {
   const r = ratio === undefined ? undefined : applyGrowth(amount, ratio, item.entryFee, item.exitFee);
   return (
     <p className="text-sm tabular-nums">
       <span className="text-xs text-muted">{label}: </span>
-      {r ? `${fmtEur(amount)} → ${fmtEur(r.netValue)}` : ratio === undefined && label === 'Periodo intero' ? 'Storico più breve: periodo intero non confrontabile' : NA}
+      {r
+        ? `${fmtEur(amount)} → ${fmtEur(r.netValue)}`
+        : ratio === undefined && label === 'Periodo intero'
+          ? 'Storico più breve: periodo intero non confrontabile'
+          : NA}
     </p>
   );
 }
@@ -73,7 +87,14 @@ export function SimilarProducts({
   if (items.length === 0) return null;
   const same = (a: string, b: string | undefined) => !!b && a.toUpperCase() === b.toUpperCase();
   return (
-    <Disclosure id="h-sim" title={`Prodotti simili (${items.length})`} preview={items.slice(0, 2).map((it) => it.name).join(' · ')}>
+    <Disclosure
+      id="h-sim"
+      title={`Prodotti simili (${items.length})`}
+      preview={items
+        .slice(0, 2)
+        .map((it) => it.name)
+        .join(' · ')}
+    >
       <p className="text-sm text-muted">{SIMILAR_RULE}</p>
       <ul className="mt-3 space-y-3">
         {items.map((it) => (
@@ -105,7 +126,9 @@ export function SimilarProducts({
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-muted">Stesse date dello strumento analizzato. Simulazione sui prezzi storici; imposte e cambio non inclusi.</p>
+      <p className="mt-2 text-xs text-muted">
+        Stesse date dello strumento analizzato. Simulazione sui prezzi storici; imposte e cambio non inclusi.
+      </p>
     </Disclosure>
   );
 }

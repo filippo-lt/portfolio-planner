@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { useRef, useState } from 'react';
-import { clearAllUserData, clearRecentReports, setThemePref, useInvestorProfile, useRecentReports, useThemePref } from '@/lib/profileStore';
+import {
+  clearAllUserData,
+  clearRecentReports,
+  setThemePref,
+  useInvestorProfile,
+  useRecentReports,
+  useThemePref,
+} from '@/lib/profileStore';
 import type { ThemePref } from '@/lib/theme';
 import { Button, SegmentedControl, Sheet } from './ui';
 
@@ -12,7 +19,8 @@ const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'dark', label: 'Scuro' },
 ];
 
-const ROW = 'pressable flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface-2 disabled:opacity-50 disabled:hover:bg-transparent';
+const ROW =
+  'pressable flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface-2 disabled:opacity-50 disabled:hover:bg-transparent';
 
 /** Top-bar button opening the settings sheet: appearance, saved data, start over. */
 export function SettingsMenu() {
@@ -46,14 +54,14 @@ export function SettingsMenu() {
       </button>
       <Sheet ref={ref} title="Impostazioni" onClose={() => setConfirming(false)}>
         <section aria-labelledby="h-set-theme" className="mt-5">
-          <h3 id="h-set-theme" className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
+          <h3 id="h-set-theme" className="mb-2 text-sm font-semibold tracking-wide text-muted uppercase">
             Aspetto
           </h3>
           <SegmentedControl label="Tema" value={theme} options={THEMES} onChange={setThemePref} />
         </section>
 
         <section aria-labelledby="h-set-data" className="mt-6">
-          <h3 id="h-set-data" className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
+          <h3 id="h-set-data" className="mb-2 text-sm font-semibold tracking-wide text-muted uppercase">
             I tuoi dati
           </h3>
           <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
@@ -76,14 +84,15 @@ export function SettingsMenu() {
         </section>
 
         <section aria-labelledby="h-set-reset" className="mt-6">
-          <h3 id="h-set-reset" className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
+          <h3 id="h-set-reset" className="mb-2 text-sm font-semibold tracking-wide text-muted uppercase">
             Ricomincia da zero
           </h3>
           {confirming ? (
             <div role="alert" className="rounded-2xl border border-error-line bg-error-soft p-4">
               <p className="font-medium text-error">Cancellare tutto?</p>
               <p className="mt-1 text-sm text-ink">
-                Profilo, benchmark scelto e cronologia verranno eliminati e ripartirai dal questionario. Non si può annullare.
+                Profilo, benchmark scelto e cronologia verranno eliminati e ripartirai dal questionario. Non si può
+                annullare.
               </p>
               <div className="mt-4 flex gap-2">
                 <Button variant="secondary" className="flex-1" onClick={() => setConfirming(false)}>
@@ -96,7 +105,9 @@ export function SettingsMenu() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-muted">Elimina profilo, benchmark scelto e cronologia, poi riparti dal questionario. Il tema resta com&apos;è.</p>
+              <p className="text-sm text-muted">
+                Elimina profilo, benchmark scelto e cronologia, poi riparti dal questionario. Il tema resta com&apos;è.
+              </p>
               <Button variant="danger" block className="mt-3" onClick={() => setConfirming(true)}>
                 Ricomincia da zero
               </Button>
@@ -115,7 +126,14 @@ export function SettingsMenu() {
 function Chevron() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 shrink-0 text-muted">
-      <path d="M7.5 4.5 13 10l-5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M7.5 4.5 13 10l-5.5 5.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

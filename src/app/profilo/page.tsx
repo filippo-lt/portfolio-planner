@@ -2,13 +2,28 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { flash, profileWarnings, saveInvestorProfile, useInvestorProfile, validateProfile, type ProfileErrors, type ProfileForm } from '@/lib/profileStore';
+import {
+  flash,
+  profileWarnings,
+  saveInvestorProfile,
+  useInvestorProfile,
+  validateProfile,
+  type ProfileErrors,
+  type ProfileForm,
+} from '@/lib/profileStore';
 import { parseItDecimal } from '@/lib/profileValidation';
 import type { Knowledge } from '@/lib/profileFit';
 import { TAX_COUNTRIES, type TaxCountry } from '@/lib/tax';
 import { Button, ButtonLink, Callout, Card, PageLoading, cx } from '@/components/ui';
 
-const EMPTY: ProfileForm = { age: '', horizonYears: '', retirementAge: '', netWorthEur: '', maxDrawdownPct: '', knowledge: '' };
+const EMPTY: ProfileForm = {
+  age: '',
+  horizonYears: '',
+  retirementAge: '',
+  netWorthEur: '',
+  maxDrawdownPct: '',
+  knowledge: '',
+};
 
 const eur = (n: number) => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 }).format(n);
 
@@ -127,7 +142,7 @@ function NumberField({
   const describedBy = [error && `${id}-err`, `${id}-hint`].filter(Boolean).join(' ');
   return (
     <div>
-      <label htmlFor={id} className="block text-base font-semibold leading-snug">
+      <label htmlFor={id} className="block text-base leading-snug font-semibold">
         {def.label}
       </label>
       <p id={`${id}-hint`} className="mt-1 text-sm text-muted">
@@ -191,7 +206,13 @@ function ErrIcon() {
   );
 }
 
-function DrawdownExtras({ form, setField }: { form: ProfileForm; setField: (k: keyof ProfileForm, v: string, recheck?: boolean) => void }) {
+function DrawdownExtras({
+  form,
+  setField,
+}: {
+  form: ProfileForm;
+  setField: (k: keyof ProfileForm, v: string, recheck?: boolean) => void;
+}) {
   const dd = parseItDecimal(form.maxDrawdownPct);
   const worth = parseItDecimal(form.netWorthEur);
   const ok = Number.isFinite(dd) && dd >= 1 && dd <= 99;
@@ -208,7 +229,9 @@ function DrawdownExtras({ form, setField }: { form: ProfileForm; setField: (k: k
               aria-pressed={on}
               className={cx(
                 'pressable min-h-11 rounded-full border text-sm font-medium tabular-nums',
-                on ? 'border-accent bg-accent text-accent-fg' : 'border-accent/25 bg-surface text-accent hover:border-accent/60 hover:bg-accent-soft',
+                on
+                  ? 'border-accent bg-accent text-accent-fg'
+                  : 'border-accent/25 bg-surface text-accent hover:border-accent/60 hover:bg-accent-soft',
               )}
             >
               {v}%
@@ -218,11 +241,17 @@ function DrawdownExtras({ form, setField }: { form: ProfileForm; setField: (k: k
       </div>
       {Number.isFinite(worth) && worth > 0 && (
         // Space is reserved up front so the cards below never move under the user's finger.
-        <p className={cx('mt-3 flex min-h-[3.25rem] items-center rounded-xl px-4 py-2 text-sm', ok ? 'bg-error-soft' : 'bg-surface-2')} aria-live="polite">
+        <p
+          className={cx(
+            'mt-3 flex min-h-[3.25rem] items-center rounded-xl px-4 py-2 text-sm',
+            ok ? 'bg-error-soft' : 'bg-surface-2',
+          )}
+          aria-live="polite"
+        >
           {ok ? (
             <span>
               Con {eur(worth)} € investiti, una perdita del {String(dd).replace('.', ',')}% corrisponde a circa{' '}
-              <strong className="tabular-nums text-error">−{eur(Math.round((worth * dd) / 100))} €</strong>.
+              <strong className="text-error tabular-nums">−{eur(Math.round((worth * dd) / 100))} €</strong>.
             </span>
           ) : (
             <span className="text-muted">Scegli una percentuale per vedere a quanti euro corrisponde.</span>
@@ -233,7 +262,15 @@ function DrawdownExtras({ form, setField }: { form: ProfileForm; setField: (k: k
   );
 }
 
-function KnowledgeField({ value, error, onChange }: { value: string; error?: string; onChange: (v: Knowledge) => void }) {
+function KnowledgeField({
+  value,
+  error,
+  onChange,
+}: {
+  value: string;
+  error?: string;
+  onChange: (v: Knowledge) => void;
+}) {
   return (
     <fieldset aria-describedby={error ? 'knowledge-err knowledge-hint' : 'knowledge-hint'}>
       <legend className="text-base font-semibold">Quanto ti senti a tuo agio con i termini finanziari?</legend>
@@ -248,7 +285,11 @@ function KnowledgeField({ value, error, onChange }: { value: string; error?: str
               key={k.value}
               className={cx(
                 'pressable flex cursor-pointer items-start gap-3 rounded-xl border bg-surface p-4',
-                on ? 'border-accent ring-2 ring-accent/25' : error ? 'border-error' : 'border-line hover:border-line-strong',
+                on
+                  ? 'border-accent ring-2 ring-accent/25'
+                  : error
+                    ? 'border-error'
+                    : 'border-line hover:border-line-strong',
               )}
             >
               <input
@@ -278,14 +319,23 @@ function KnowledgeField({ value, error, onChange }: { value: string; error?: str
   );
 }
 
-function TaxCountryField({ value, error, onChange }: { value: string; error?: string; onChange: (v: TaxCountry | '') => void }) {
+function TaxCountryField({
+  value,
+  error,
+  onChange,
+}: {
+  value: string;
+  error?: string;
+  onChange: (v: TaxCountry | '') => void;
+}) {
   return (
     <div>
       <label htmlFor="taxCountry" className="text-base font-semibold">
         Residenza fiscale
       </label>
       <p id="taxCountry-hint" className="mt-1 text-sm text-muted">
-        Facoltativa. Serve a stimare le tasse sul risultato in euro; la stima è disponibile per Italia, Spagna, Germania, Francia e Regno Unito.
+        Facoltativa. Serve a stimare le tasse sul risultato in euro; la stima è disponibile per Italia, Spagna,
+        Germania, Francia e Regno Unito.
       </p>
       <select
         id="taxCountry"
@@ -311,7 +361,11 @@ function TaxCountryField({ value, error, onChange }: { value: string; error?: st
 
 const STEPS: { title: string; intro: string; fields: (keyof ProfileForm)[] }[] = [
   { title: 'Su di te', intro: 'Due numeri per capire in che fase della vita sei.', fields: ['age', 'retirementAge'] },
-  { title: 'I tuoi investimenti', intro: 'Servono a mettere in proporzione i dati di ogni strumento.', fields: ['horizonYears', 'netWorthEur'] },
+  {
+    title: 'I tuoi investimenti',
+    intro: 'Servono a mettere in proporzione i dati di ogni strumento.',
+    fields: ['horizonYears', 'netWorthEur'],
+  },
   {
     title: 'Rischio e dettaglio',
     intro: "L'ultimo passo: quanta oscillazione accetti e quanti dettagli vuoi vedere.",
@@ -335,12 +389,22 @@ function Onboarding() {
         <div className="flex-1">
           <span aria-hidden="true" className="btn-primary grid h-14 w-14 place-items-center rounded-2xl text-accent-fg">
             <svg viewBox="0 0 24 24" className="h-7 w-7">
-              <path d="M4 17l5-5 4 4 7-8" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M4 17l5-5 4 4 7-8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </span>
-          <h1 className="mt-5 text-3xl font-semibold tracking-tight">Capisci i numeri di un ETF, di un fondo o di un&apos;azione, rispetto a te.</h1>
+          <h1 className="mt-5 text-3xl font-semibold tracking-tight">
+            Capisci i numeri di un ETF, di un fondo o di un&apos;azione, rispetto a te.
+          </h1>
           <p className="mt-3 text-lg text-muted">
-            Cerchi uno strumento e ottieni un report con dati e confronti numerici, messi in relazione con il tuo profilo.
+            Cerchi uno strumento e ottieni un report con dati e confronti numerici, messi in relazione con il tuo
+            profilo.
           </p>
           <ol className="mt-8 space-y-4">
             {[
@@ -349,7 +413,10 @@ function Onboarding() {
               ['3', 'Leggi il report', 'Costi, rendimenti, rischio e confronto con il tuo profilo.'],
             ].map(([n, t, d]) => (
               <li key={n} className="flex gap-4">
-                <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-sm font-bold text-accent">
+                <span
+                  aria-hidden="true"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-sm font-bold text-accent"
+                >
                   {n}
                 </span>
                 <span>
@@ -367,7 +434,7 @@ function Onboarding() {
             I dati restano solo su questo dispositivo.
           </p>
         </div>
-        <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
+        <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
           <Button block onClick={() => setStep(0)}>
             Inizia
           </Button>
@@ -413,15 +480,25 @@ function Onboarding() {
           className="pressable -ml-2 grid h-11 w-11 place-items-center rounded-full text-ink hover:bg-surface-2"
         >
           <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5">
-            <path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M12.5 4.5 7 10l5.5 5.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
         <div className="flex flex-1 gap-1.5" aria-hidden="true">
           {STEPS.map((_, i) => (
-            <span key={i} className={cx('h-1.5 flex-1 rounded-full transition-colors', i <= step ? 'btn-primary' : 'bg-surface-2')} />
+            <span
+              key={i}
+              className={cx('h-1.5 flex-1 rounded-full transition-colors', i <= step ? 'btn-primary' : 'bg-surface-2')}
+            />
           ))}
         </div>
-        <span className="text-sm tabular-nums text-muted">
+        <span className="text-sm text-muted tabular-nums">
           {step + 1} di {STEPS.length}
         </span>
       </div>
@@ -434,9 +511,19 @@ function Onboarding() {
         <div className="mt-6 space-y-7">
           {s.fields.map((k, i) =>
             k === 'knowledge' ? (
-              <KnowledgeField key={k} value={form.knowledge} error={errors.knowledge} onChange={(v) => setField('knowledge', v, true)} />
+              <KnowledgeField
+                key={k}
+                value={form.knowledge}
+                error={errors.knowledge}
+                onChange={(v) => setField('knowledge', v, true)}
+              />
             ) : k === 'taxCountry' ? (
-              <TaxCountryField key={k} value={form.taxCountry ?? ''} error={errors.taxCountry} onChange={(v) => setField('taxCountry', v, true)} />
+              <TaxCountryField
+                key={k}
+                value={form.taxCountry ?? ''}
+                error={errors.taxCountry}
+                onChange={(v) => setField('taxCountry', v, true)}
+              />
             ) : (
               <NumberField
                 key={k}
@@ -459,7 +546,7 @@ function Onboarding() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
+      <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-bg/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
         {s.fields.some((k) => errors[k]) && (
           <p role="alert" className="mb-2 text-center text-sm font-medium text-error">
             Completa i campi evidenziati per continuare.
@@ -475,7 +562,15 @@ function Onboarding() {
 
 /* ---------- edit mode: everything on one page ---------- */
 
-const ORDER: (keyof ProfileForm)[] = ['age', 'retirementAge', 'horizonYears', 'netWorthEur', 'maxDrawdownPct', 'knowledge', 'taxCountry'];
+const ORDER: (keyof ProfileForm)[] = [
+  'age',
+  'retirementAge',
+  'horizonYears',
+  'netWorthEur',
+  'maxDrawdownPct',
+  'knowledge',
+  'taxCountry',
+];
 
 function EditProfile({ initial }: { initial: ProfileForm }) {
   const { form, setForm, errors, setErrors, setField, recheck } = useFormState(initial);
@@ -501,10 +596,15 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
   return (
     <form onSubmit={submit} noValidate className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Il tuo profilo</h1>
-      <p className="mt-1 text-muted">I report confrontano i dati di ogni strumento con questi valori. Restano solo su questo dispositivo.</p>
+      <p className="mt-1 text-muted">
+        I report confrontano i dati di ogni strumento con questi valori. Restano solo su questo dispositivo.
+      </p>
 
       {errCount > 0 && (
-        <p role="alert" className="mt-4 flex items-start gap-2 rounded-xl bg-error-soft px-4 py-3 text-sm font-medium text-error">
+        <p
+          role="alert"
+          className="mt-4 flex items-start gap-2 rounded-xl bg-error-soft px-4 py-3 text-sm font-medium text-error"
+        >
           <ErrIcon />
           {errCount === 1 ? 'Un campo da correggere.' : `${errCount} campi da correggere.`}
         </p>
@@ -512,8 +612,14 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
 
       <div className="mt-6 space-y-4">
         <Card className="space-y-7">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Su di te</h2>
-          <NumberField def={FIELDS.age} value={form.age} error={errors.age} onChange={(v) => setField('age', v)} onBlur={(v) => recheck('age', v)} />
+          <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">Su di te</h2>
+          <NumberField
+            def={FIELDS.age}
+            value={form.age}
+            error={errors.age}
+            onChange={(v) => setField('age', v)}
+            onBlur={(v) => recheck('age', v)}
+          />
           <NumberField
             def={FIELDS.retirementAge}
             value={form.retirementAge}
@@ -523,7 +629,7 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
           />
         </Card>
         <Card className="space-y-7">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">I tuoi investimenti</h2>
+          <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">I tuoi investimenti</h2>
           <NumberField
             def={FIELDS.horizonYears}
             value={form.horizonYears}
@@ -545,7 +651,7 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
           ))}
         </Card>
         <Card className="space-y-7">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Rischio e dettaglio</h2>
+          <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">Rischio e dettaglio</h2>
           <NumberField
             def={FIELDS.maxDrawdownPct}
             value={form.maxDrawdownPct}
@@ -556,16 +662,34 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
           >
             <DrawdownExtras form={form} setField={setField} />
           </NumberField>
-          <KnowledgeField value={form.knowledge} error={errors.knowledge} onChange={(v) => setField('knowledge', v, true)} />
-          <TaxCountryField value={form.taxCountry ?? ''} error={errors.taxCountry} onChange={(v) => setField('taxCountry', v, true)} />
+          <KnowledgeField
+            value={form.knowledge}
+            error={errors.knowledge}
+            onChange={(v) => setField('knowledge', v, true)}
+          />
+          <TaxCountryField
+            value={form.taxCountry ?? ''}
+            error={errors.taxCountry}
+            onChange={(v) => setField('taxCountry', v, true)}
+          />
         </Card>
       </div>
 
-      <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] -mx-4 mt-6 border-t border-line bg-bg/95 px-4 py-3 empty:hidden sm:bg-bg/85 sm:backdrop-blur-md sm:bottom-0 sm:mx-0 sm:rounded-2xl sm:border sm:px-3">
+      <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] -mx-4 mt-6 border-t border-line bg-bg/95 px-4 py-3 empty:hidden sm:bottom-0 sm:mx-0 sm:rounded-2xl sm:border sm:bg-bg/85 sm:px-3 sm:backdrop-blur-md">
         {!dirty && !showSaved ? null : showSaved ? (
-          <div role="status" className="rise flex items-center gap-3 rounded-xl border border-success-line bg-success-soft p-2 pl-4">
+          <div
+            role="status"
+            className="rise flex items-center gap-3 rounded-xl border border-success-line bg-success-soft p-2 pl-4"
+          >
             <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 shrink-0 text-success">
-              <path d="M4.5 10.5 8.5 14.5 15.5 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M4.5 10.5 8.5 14.5 15.5 6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             <span className="flex-1 text-sm font-semibold text-success">Profilo salvato</span>
             <ButtonLink href="/" variant="primary" className="min-h-11 px-4 text-sm">

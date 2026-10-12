@@ -15,7 +15,9 @@ export const BANNED_WORDS: readonly RegExp[] = [
   W('peggior[ei]'),
   W('conviene|convengono|convenire|convenient\\p{L}*|convenienza'),
   W('consigliat\\p{L}*|consigli\\p{L}*|sconsigli\\p{L}*'),
-  W('compr(a|are|ate|ano|iamo|ando|at[oaie]|i)|comprer\\p{L}*|acquist(a|are|ate|ano|iamo|ando|at[oaie])|acquister\\p{L}*'),
+  W(
+    'compr(a|are|ate|ano|iamo|ando|at[oaie]|i)|comprer\\p{L}*|acquist(a|are|ate|ano|iamo|ando|at[oaie])|acquister\\p{L}*',
+  ),
   W('dovrebb\\p{L}*|dovrei|dovrest\\p{L}*'),
   W('raccomand\\p{L}*'),
   W('ottim\\p{L}*|ideale|ideali'),
@@ -69,8 +71,16 @@ export interface FitReading {
 
 const LABELS: Record<FitStatement['id'], Partial<Record<Tone, string>>> = {
   drawdown: { good: 'Entro la tua soglia', worry: 'Vicino alla tua soglia', bad: 'Oltre la tua soglia' },
-  volatility: { good: 'Oscillazioni contenute per il tuo orizzonte', worry: 'Oscillazioni ampie per il tuo orizzonte', bad: 'Oscillazioni molto ampie per il tuo orizzonte' },
-  rolling: { good: 'Mai in perdita sul tuo orizzonte', worry: 'Anche periodi in perdita', bad: 'Spesso in perdita sul tuo orizzonte' },
+  volatility: {
+    good: 'Oscillazioni contenute per il tuo orizzonte',
+    worry: 'Oscillazioni ampie per il tuo orizzonte',
+    bad: 'Oscillazioni molto ampie per il tuo orizzonte',
+  },
+  rolling: {
+    good: 'Mai in perdita sul tuo orizzonte',
+    worry: 'Anche periodi in perdita',
+    bad: 'Spesso in perdita sul tuo orizzonte',
+  },
   currency: { good: 'Quotato in euro', worry: 'Rischio di cambio' },
 };
 

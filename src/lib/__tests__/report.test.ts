@@ -59,7 +59,9 @@ describe('classMismatch', () => {
   it('names both classes in Italian when known and different', async () => {
     const { classMismatch } = await import('../report');
     const msg = classMismatch('equity', 'bond');
-    expect(msg).toBe('Il riferimento è obbligazionario, lo strumento è azionario: il confronto potrebbe non essere omogeneo.');
+    expect(msg).toBe(
+      'Il riferimento è obbligazionario, lo strumento è azionario: il confronto potrebbe non essere omogeneo.',
+    );
     expect(findBannedWords(msg ?? '')).toEqual([]);
   });
   it('stays silent when equal or when either is unknown/missing', async () => {

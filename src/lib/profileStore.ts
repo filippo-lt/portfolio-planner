@@ -109,7 +109,11 @@ export function parseBenchmarkPrefs(raw: string | null): BenchmarkPrefs {
   }
 }
 
-export function useBenchmarkPrefs(): [BenchmarkPrefs, (assetClass: AssetClass, symbol: string) => void, (assetClass: AssetClass) => void] {
+export function useBenchmarkPrefs(): [
+  BenchmarkPrefs,
+  (assetClass: AssetClass, symbol: string) => void,
+  (assetClass: AssetClass) => void,
+] {
   const raw = useSyncExternalStore(
     subscribe,
     () => read(BENCH_KEY) ?? '',
@@ -157,7 +161,10 @@ export function useFeeOverride(symbol: string): [UserFees, (fees: UserFees) => v
       const { [key]: _drop, ...rest } = readFeeMap(read(FEES_KEY));
       void _drop;
       const clean = parseUserFees(next);
-      write(FEES_KEY, JSON.stringify(clean.entry === undefined && clean.exit === undefined ? rest : { ...rest, [key]: clean }));
+      write(
+        FEES_KEY,
+        JSON.stringify(clean.entry === undefined && clean.exit === undefined ? rest : { ...rest, [key]: clean }),
+      );
     },
     [key],
   );
@@ -209,7 +216,15 @@ function parseRecent(raw: string): RecentItem[] {
   try {
     const a = JSON.parse(raw);
     return Array.isArray(a)
-      ? a.filter((x) => x && typeof x.symbol === 'string' && typeof x.name === 'string' && (x.type === 'ETF' || x.type === 'FUND' || x.type === 'STOCK')).slice(0, RECENT_MAX)
+      ? a
+          .filter(
+            (x) =>
+              x &&
+              typeof x.symbol === 'string' &&
+              typeof x.name === 'string' &&
+              (x.type === 'ETF' || x.type === 'FUND' || x.type === 'STOCK'),
+          )
+          .slice(0, RECENT_MAX)
       : [];
   } catch {
     return [];

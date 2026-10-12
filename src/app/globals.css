@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --bg: #f4f5fa;
@@ -36,7 +36,7 @@
 }
 
 /* data-theme is set pre-paint by THEME_SCRIPT (src/lib/theme.ts) from the saved choice or the OS */
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   --bg: #0d0e14;
   --surface: #171923;
   --surface-2: #20232f;
@@ -104,7 +104,11 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    sans-serif;
   overscroll-behavior-y: none;
 }
 
@@ -115,21 +119,35 @@ body {
 
 /* Soft elevation in light mode; borders carry the separation in dark mode */
 .card {
-  box-shadow: 0 1px 2px rgb(20 20 15 / 0.04), 0 2px 8px -2px rgb(20 20 15 / 0.05);
+  box-shadow:
+    0 1px 2px rgb(20 20 15 / 0.04),
+    0 2px 8px -2px rgb(20 20 15 / 0.05);
 }
-[data-theme="dark"] .card { box-shadow: none; }
+[data-theme='dark'] .card {
+  box-shadow: none;
+}
 
 /* Primary CTA: vivid gradient so the main action is unmistakable */
 .btn-primary {
   background-image: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  box-shadow: 0 1px 2px rgb(40 30 120 / 0.18), 0 6px 16px -6px rgb(79 70 229 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.15);
+  box-shadow:
+    0 1px 2px rgb(40 30 120 / 0.18),
+    0 6px 16px -6px rgb(79 70 229 / 0.55),
+    inset 0 1px 0 rgb(255 255 255 / 0.15);
 }
-.btn-primary:hover { filter: brightness(1.06); }
-[data-theme="dark"] .btn-primary { box-shadow: 0 6px 18px -8px rgb(139 133 255 / 0.6); }
+.btn-primary:hover {
+  filter: brightness(1.06);
+}
+[data-theme='dark'] .btn-primary {
+  box-shadow: 0 6px 18px -8px rgb(139 133 255 / 0.6);
+}
 
 /* Native-feeling press feedback */
 .pressable {
-  transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease;
 }
 .pressable:active {
   transform: scale(0.97);
@@ -137,7 +155,9 @@ body {
 
 /* Opacity pulse runs on the compositor; a moving gradient would repaint every frame */
 @keyframes pulse {
-  50% { opacity: 0.5; }
+  50% {
+    opacity: 0.5;
+  }
 }
 .skeleton {
   background: var(--border);
@@ -146,16 +166,29 @@ body {
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .rise {
   animation: rise 180ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pressable, .pressable:active { transition: none; transform: none; }
-  .skeleton, .rise { animation: none; }
+  .pressable,
+  .pressable:active {
+    transition: none;
+    transform: none;
+  }
+  .skeleton,
+  .rise {
+    animation: none;
+  }
 }
 
 /* Bottom sheet (dialog) */
@@ -167,13 +200,24 @@ dialog.sheet[open] {
   animation: sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes sheet-up {
-  from { transform: translateY(24px); opacity: 0; }
-  to { transform: none; opacity: 1; }
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  dialog.sheet[open] { animation: none; }
+  dialog.sheet[open] {
+    animation: none;
+  }
 }
 
-details > summary { list-style: none; }
-details > summary::-webkit-details-marker { display: none; }
-
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}

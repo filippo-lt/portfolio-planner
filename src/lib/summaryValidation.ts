@@ -2,14 +2,28 @@
 import { findBannedWords } from './tone';
 
 /** Extra words rejected only in AI output (UI instructions such as "Scegli un riferimento" are fine). */
-const SUMMARY_ONLY_BANNED = /(?<![\p{L}\p{N}_])(?:scegli\p{L}*|evita\p{L}*|opportun\p{L}*|previsione|previsioni|prevedi\p{L}*)(?![\p{L}\p{N}_])/iu;
+const SUMMARY_ONLY_BANNED =
+  /(?<![\p{L}\p{N}_])(?:scegli\p{L}*|evita\p{L}*|opportun\p{L}*|previsione|previsioni|prevedi\p{L}*)(?![\p{L}\p{N}_])/iu;
 
 /** Italian number words (ambiguous ones such as "uno/una/sei" are left out). The model is told to use digits only. */
 export const NUMBER_WORDS =
   /\b(due|tre|quattro|cinque|sette|otto|nove|dieci|undici|dodici|tredici|quattordici|quindici|sedici|diciassette|diciotto|diciannove|venti|trenta|quaranta|cinquanta|sessanta|settanta|ottanta|novanta|cento|mille|duemila|milione|milioni|miliardo|miliardi|trilione|trilioni|zero)\b/i;
 
 const ISO_DATE = /\d{4}-\d{2}-\d{2}/g;
-const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+const MONTHS = [
+  'gennaio',
+  'febbraio',
+  'marzo',
+  'aprile',
+  'maggio',
+  'giugno',
+  'luglio',
+  'agosto',
+  'settembre',
+  'ottobre',
+  'novembre',
+  'dicembre',
+];
 const IT_DATE = new RegExp(`\\b(\\d{1,2})\\s+(${MONTHS.join('|')})\\s+(\\d{4})\\b`, 'gi');
 const SLASH_DATE = /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g;
 const NUM_TOKEN = /(?<![\w.,])([+\-−–]?)(\d[\d.,]*)/g;
@@ -127,7 +141,9 @@ export function findUnknownNumbers(output: string, input: unknown): string[] {
     const tok = m[2];
     if (sign === '' && /^(19|20)\d{2}$/.test(tok) && src.years.has(Number(tok))) continue; // whole-token year
     const parsed = parseNumberToken(tok);
-    const ok = parsed.values.some((v, i) => Number.isFinite(v) && numberMatches(sign, v, parsed.decimals[i], src.numbers));
+    const ok = parsed.values.some(
+      (v, i) => Number.isFinite(v) && numberMatches(sign, v, parsed.decimals[i], src.numbers),
+    );
     if (!ok) bad.push(m[0]);
   }
   return bad;
@@ -135,7 +151,8 @@ export function findUnknownNumbers(output: string, input: unknown): string[] {
 
 export function validateSummary(output: string, input: unknown): { ok: boolean; reason?: string } {
   if (!output.trim()) return { ok: false, reason: 'vuoto' };
-  if (findBannedWords(output).length || SUMMARY_ONLY_BANNED.test(output)) return { ok: false, reason: 'parole non ammesse' };
+  if (findBannedWords(output).length || SUMMARY_ONLY_BANNED.test(output))
+    return { ok: false, reason: 'parole non ammesse' };
   if (NUMBER_WORDS.test(output)) return { ok: false, reason: 'numeri scritti a parole' };
   const bad = findUnknownNumbers(output, input);
   if (bad.length) return { ok: false, reason: `numeri non presenti nei dati: ${bad.join(', ')}` };

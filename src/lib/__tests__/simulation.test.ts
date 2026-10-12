@@ -45,7 +45,13 @@ describe('simulate', () => {
   });
 
   it('can lose money', () => {
-    const r = simulate({ amount: 1000, prices: px([['2024-01-02', 100], ['2025-01-02', 90]]) })!;
+    const r = simulate({
+      amount: 1000,
+      prices: px([
+        ['2024-01-02', 100],
+        ['2025-01-02', 90],
+      ]),
+    })!;
     expect(r.gainEur).toBeCloseTo(-100);
   });
 
@@ -65,7 +71,15 @@ describe('simulate', () => {
 
   it('is undefined for a bad amount or price', () => {
     expect(simulate({ amount: 0, prices: series })).toBeUndefined();
-    expect(simulate({ amount: 1000, prices: px([['2024-01-02', 0], ['2025-01-02', 90]]) })).toBeUndefined();
+    expect(
+      simulate({
+        amount: 1000,
+        prices: px([
+          ['2024-01-02', 0],
+          ['2025-01-02', 90],
+        ]),
+      }),
+    ).toBeUndefined();
   });
 });
 
@@ -101,7 +115,13 @@ describe('simulate with currency conversion', () => {
     expect(r.fx!.costEur).toBeCloseTo(noSpread - r.netValue, 6);
     // the spread is not inside the gross value: it is shown once, as the cost
     expect(r.grossValue).toBeCloseTo(noSpread, 6);
-    expect(r.fx).toMatchObject({ startRate: 1.1, startRateDate: '2022-12-30', endRate: 1.25, endRateDate: '2024-12-31', cost: 0.01 });
+    expect(r.fx).toMatchObject({
+      startRate: 1.1,
+      startRateDate: '2022-12-30',
+      endRate: 1.25,
+      endRateDate: '2024-12-31',
+      cost: 0.01,
+    });
     expect(r.gainEur).toBeCloseTo(r.netValue - 1000, 6);
   });
   it('zero spread has zero cost', () => {
@@ -116,21 +136,46 @@ describe('simulate with currency conversion', () => {
     expect(r.exitFeeEur).toBeCloseTo(r.grossValue * 0.01, 6);
   });
   it('converts dividends of a distributing product at the end rate', () => {
-    const raw = px([['2023-01-02', 100], ['2024-01-02', 110], ['2025-01-02', 121]]);
-    const r = simulate({ amount: 1000, prices: series, rawPrices: raw, dividends: [{ date: '2024-06-01', amount: 2 }], fx: { rates, cost: 0 } })!;
+    const raw = px([
+      ['2023-01-02', 100],
+      ['2024-01-02', 110],
+      ['2025-01-02', 121],
+    ]);
+    const r = simulate({
+      amount: 1000,
+      prices: series,
+      rawPrices: raw,
+      dividends: [{ date: '2024-06-01', amount: 2 }],
+      fx: { rates, cost: 0 },
+    })!;
     const k = 1.1 / 1.25;
     expect(r.dividendsEur).toBeCloseTo(10 * 2 * k, 6);
     expect(r.netValue).toBeCloseTo((1000 * 1.21 + 20) * k, 6);
   });
   it('reconciles: net = gross - exit fee + dividends - fx cost', () => {
-    const raw = px([['2023-01-02', 100], ['2024-01-02', 110], ['2025-01-02', 121]]);
-    const r = simulate({ amount: 1000, prices: series, entryFee: 0.01, exitFee: 0.02, rawPrices: raw, dividends: [{ date: '2024-06-01', amount: 2 }], fx: { rates, cost: 0.005 } })!;
+    const raw = px([
+      ['2023-01-02', 100],
+      ['2024-01-02', 110],
+      ['2025-01-02', 121],
+    ]);
+    const r = simulate({
+      amount: 1000,
+      prices: series,
+      entryFee: 0.01,
+      exitFee: 0.02,
+      rawPrices: raw,
+      dividends: [{ date: '2024-06-01', amount: 2 }],
+      fx: { rates, cost: 0.005 },
+    })!;
     expect(r.grossValue - r.exitFeeEur + r.dividendsEur! - r.fx!.costEur).toBeCloseTo(r.netValue, 9);
     const acc = simulate({ amount: 1000, prices: series, exitFee: 0.02, fx: { rates, cost: 0.01 } })!;
     expect(acc.grossValue - acc.exitFeeEur - acc.fx!.costEur).toBeCloseTo(acc.netValue, 9);
   });
   it('stays unconverted when a rate is missing or too old', () => {
-    const stale = px([['2022-06-01', 1.1], ['2024-12-31', 1.25]]);
+    const stale = px([
+      ['2022-06-01', 1.1],
+      ['2024-12-31', 1.25],
+    ]);
     const r = simulate({ amount: 1000, prices: series, fx: { rates: stale, cost: 0.0025 } })!;
     expect(r.fx).toBeUndefined();
     expect(r.netValue).toBeCloseTo(1210);

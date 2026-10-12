@@ -21,6 +21,7 @@ Priorities: P0 = do first, P1 = next, P2 = nice to have.
 Delivers: a clean chart and a correct message on the current screen. Comes first because it is small, has no dependencies, and the chart is the screen everyone sees.
 
 ### 0.1 Fix repeated year labels on x-axis
+
 - Priority: P0 | Size: S | Type: bug fix (extension)
 - What/why: Ticks appear about every 6 months but only the year is shown, so "2022, 2022, 2023, 2024, 2024...". Show month+year (e.g. "gen 23") when ticks are less than a year apart, or force one tick per year.
 - Source: review note (screenshot bug).
@@ -29,6 +30,7 @@ Delivers: a clean chart and a correct message on the current screen. Comes first
 - Depends on: none.
 
 ### 0.2 Show the gap between fund and benchmark in one sentence
+
 - Priority: P1 | Size: S | Type: extension
 - What/why: The chart already shows the fund below the bond ETF. Add a neutral line under the chart: "In X years the fund is +Y% and the reference is +Z%". Keep it factual, no judgment (SPEC rule).
 - Source: friend 1.
@@ -43,6 +45,7 @@ Delivers: a clean chart and a correct message on the current screen. Comes first
 Delivers: presets that match the fund's asset class, and benchmarks that are real products with ticker and ISIN. Comes before money simulation because a wrong benchmark makes every later number meaningless.
 
 ### 1.1 Detect the asset class of the analysed fund
+
 - Priority: P0 | Size: M | Type: new
 - What/why: Know if the fund is equity, bond, mixed or other. Needed to choose fair presets. Use Yahoo category/holdings data when available; fall back to "unknown".
 - Source: friend 4, review note (agree with 4 and 7).
@@ -51,6 +54,7 @@ Delivers: presets that match the fund's asset class, and benchmarks that are rea
 - Depends on: none.
 
 ### 1.2 Presets depend on asset class
+
 - Priority: P0 | Size: M | Type: extension
 - What/why: Bond fund shows only bond presets (e.g. Global Aggregate `AGGH.MI`). Equity fund shows the equity presets. Unknown shows the free ticker input plus a short note. Default benchmark also depends on class (today it is always `VWCE.DE`).
 - Source: friend 4, 8; review notes.
@@ -59,6 +63,7 @@ Delivers: presets that match the fund's asset class, and benchmarks that are rea
 - Depends on: 1.1.
 
 ### 1.3 S&P 500 only for equity funds
+
 - Priority: P1 | Size: S | Type: extension
 - What/why: Keep S&P 500 as an optional toggle for equity funds only. Not always-on. (We disagree with friend 8 for bonds.)
 - Source: friend 8, review note.
@@ -67,6 +72,7 @@ Delivers: presets that match the fund's asset class, and benchmarks that are rea
 - Depends on: 1.2.
 
 ### 1.4 Warning when a custom ticker has a different asset class
+
 - Priority: P1 | Size: S | Type: new
 - What/why: If the user types an equity ticker for a bond fund, show a neutral note: "Different type of instrument, comparison may not be fair". Do not block.
 - Source: friend 4, review note.
@@ -75,6 +81,7 @@ Delivers: presets that match the fund's asset class, and benchmarks that are rea
 - Depends on: 1.1.
 
 ### 1.5 Benchmarks as real products: curated list with ticker + ISIN
+
 - Priority: P0 | Size: M | Type: new
 - What/why: Replace the 4 hard-coded presets with a small curated list: ticker, ISIN, name, asset class, TER, accumulating/distributing, replication (physical/synthetic). The button text shows the real product, e.g. "iShares Core Global Aggregate Bond (ISIN ...)".
 - Source: friend 2, 7.
@@ -83,6 +90,7 @@ Delivers: presets that match the fund's asset class, and benchmarks that are rea
 - Depends on: 1.2 (list is grouped by class). Data source: see Open questions.
 
 ### 1.6 Show ISIN for the analysed fund and for a custom ticker
+
 - Priority: P1 | Size: S | Type: extension
 - What/why: ISIN is in the type but often empty. Fill it (OpenFIGI is already used for ISIN to ticker; check reverse lookup) and show it on both sides of the comparison.
 - Source: friend 2.
@@ -97,6 +105,7 @@ Delivers: presets that match the fund's asset class, and benchmarks that are rea
 Delivers: clear, early view of what the fund costs (TER, entry/exit fees) compared with the reference product. Comes before the simulation because the simulation needs these numbers, and because cost is the strongest simple message.
 
 ### 2.1 Move cost card to the top of the report
+
 - Priority: P0 | Size: S | Type: extension
 - What/why: TER card exists but is low on the page. Put costs before the risk cards. Show fund TER vs benchmark TER side by side.
 - Source: friend 5.
@@ -105,6 +114,7 @@ Delivers: clear, early view of what the fund costs (TER, entry/exit fees) compar
 - Depends on: none.
 
 ### 2.2 Add entry and exit fee fields to the data model
+
 - Priority: P1 | Size: M | Type: new
 - What/why: Add `entryFee`, `exitFee` (and maybe `performanceFee`) to `InstrumentProfile`. Fill from a data source or from a manual overrides file. Yahoo does not give these reliably.
 - Source: friend 3, 5.
@@ -113,6 +123,7 @@ Delivers: clear, early view of what the fund costs (TER, entry/exit fees) compar
 - Depends on: data source decision (Open questions).
 
 ### 2.3 Costs summary line in euros per year
+
 - Priority: P1 | Size: S | Type: new
 - What/why: "On a given amount, TER costs about X per year." Uses the amount from Phase 3; before that, a fixed example of 1,000 EUR.
 - Source: friend 5, 7.
@@ -121,6 +132,7 @@ Delivers: clear, early view of what the fund costs (TER, entry/exit fees) compar
 - Depends on: 2.1.
 
 ### 2.4 Let user enter a fee manually when data is missing
+
 - Priority: P2 | Size: S | Type: new
 - What/why: Small input "Entry fee %" / "Exit fee %" so the user can type what their bank charges. Fallback only: the goal is real fee data from 2.2.
 - Source: friend 5.
@@ -135,6 +147,7 @@ Delivers: clear, early view of what the fund costs (TER, entry/exit fees) compar
 Delivers: plain-euro result: invest an amount, see the result after costs in the fund and in the reference product. Comes after Phases 1 and 2 because it needs a fair benchmark and cost data. This is the real value; the chart is secondary.
 
 ### 3.1 Amount input and gross simulation (no tax)
+
 - Priority: P0 | Size: M | Type: new
 - What/why: User enters an amount (default 1,000 EUR). Show what it became over the available period (and the last 12 months) in the fund and in the reference product, using the adjusted prices already loaded. Plain numbers: "You gain 10 EUR / lose 100 EUR".
 - Source: friend 3, 7.
@@ -143,6 +156,7 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 - Depends on: 1.2, 1.5.
 
 ### 3.2 Apply entry/exit fees and TER
+
 - Priority: P0 | Size: M | Type: extension
 - What/why: Subtract entry fee, exit fee and yearly TER. Show "fees cost you X EUR". Note: fund prices are net of TER already; do not subtract TER twice (check this carefully).
 - Source: friend 3, 5, 7.
@@ -151,6 +165,7 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 - Depends on: 3.1, 2.2.
 
 ### 3.3 Accumulating vs distributing
+
 - Priority: P1 | Size: M | Type: new
 - What/why: Adjusted prices hide this difference. Show coupons/dividends as cash received (distributing) or reinvested (accumulating). Needs dividend history and the share class flag.
 - Source: friend 3.
@@ -159,6 +174,7 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 - Depends on: 3.1.
 
 ### 3.4 Same-volatility, same-type equivalent ETF
+
 - Priority: P1 | Size: L | Type: new
 - What/why: Show "what with 1,000 EUR in an ETF of similar volatility and same instrument type". List 2-3 products from the curated list (1.5) with the same asset class and closest volatility, all shown equally (no single "winner", see 3.6). Explain the rule used in one line.
 - Source: friend 3, 7.
@@ -167,6 +183,7 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 - Depends on: 1.5, 3.1.
 
 ### 3.5 Shift the page hierarchy: euro result first, chart second
+
 - Priority: P1 | Size: M | Type: extension
 - What/why: Put the euro box at the top, chart below as supporting evidence. Keep risk cards (loss threshold, drawdown, volatility, horizon) after.
 - Source: friend 7, review note.
@@ -175,6 +192,7 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 - Depends on: 3.1.
 
 ### 3.6 "Similar products" wording (decided: guide, don't recommend)
+
 - Priority: P0 | Size: S | Type: copy + rules
 - What/why: Friend 7 wants "you should buy this ISIN". Decision: no buy suggestion. Instead show a neutral "Prodotti simili" list (same asset class and type) with ISIN, TER, fees and the euro result side by side. The user compares and decides. No ranking words ("migliore", "consigliato"), no "compra", no single highlighted winner. Sort by a stated, neutral rule (e.g. closest volatility) and say the rule.
 - Example copy: "Prodotti simili per tipo e volatilità: ISIN ... · TER 0,10% · 1.000 € → 1.042 €". Not: "Dovresti comprare ISIN ...".
@@ -191,6 +209,7 @@ Delivers: plain-euro result: invest an amount, see the result after costs in the
 Delivers: net-of-tax euro result for Italian residents. Comes after Phase 3 because tax applies to the simulated result. Italy first because it is our users' country and the rules are known; other countries follow in Phase 5.
 
 ### 4.1 Tax country setting
+
 - Priority: P1 | Size: S | Type: new
 - What/why: Add "Residenza fiscale" in the profile. Italy works first; countries not yet supported show "tax not included" until Phase 5 adds them.
 - Source: friend 6, review note.
@@ -199,6 +218,7 @@ Delivers: net-of-tax euro result for Italian residents. Comes after Phase 3 beca
 - Depends on: Phase 3.
 
 ### 4.2 Italian capital gains in the simulation
+
 - Priority: P1 | Size: L | Type: new
 - What/why: 26% on gains in general, 12.5% on the government-bond part; for ETFs, gains are "redditi di capitale" so losses cannot offset them (show this as a note). Apply to the exit result only. Needs a tax-advisor review.
 - Source: friend 6, review note.
@@ -213,6 +233,7 @@ Delivers: net-of-tax euro result for Italian residents. Comes after Phase 3 beca
 Delivers: the same net euro result for users outside Italy, plus the real cost of currency. Comes after Phase 4 because it reuses the tax engine built there.
 
 ### 5.1 Tax engine per country
+
 - Priority: P1 | Size: L | Type: new
 - What/why: Turn `src/lib/tax/it.ts` into one module per country behind a common interface (rate on gains, special rates, whether losses offset gains, tax on coupons/dividends). Add the countries our test users live in first.
 - Source: friend 6.
@@ -221,6 +242,7 @@ Delivers: the same net euro result for users outside Italy, plus the real cost o
 - Depends on: 4.2.
 
 ### 5.2 Currency conversion costs
+
 - Priority: P1 | Size: M | Type: new
 - What/why: When the fund or the similar product trades in another currency (USD, GBP), show the conversion and its cost (spread / broker fee, user-editable, default from a stated source).
 - Source: friend 6.
