@@ -297,7 +297,7 @@ export function Disclosure({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(
-    () => defaultOpen || hashIs(id) || (openOnDesktop && typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches),
+    () => forceOpen || defaultOpen || hashIs(id) || (openOnDesktop && typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches),
   );
   const [prevForce, setPrevForce] = useState(forceOpen);
   if (forceOpen !== prevForce) {
