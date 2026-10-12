@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { clearRecentReports, flash, useInvestorProfile, useRecentReports } from '@/lib/profileStore';
-import type { SymbolCandidate } from '@/lib/data/types';
-import { exchangeLabel, nameTags } from '@/lib/labels';
+import type { InstrumentType, SymbolCandidate } from '@/lib/data/types';
+import { exchangeLabel, nameTags, typeLabel } from '@/lib/labels';
 import { Button, Callout, Chip, PageLoading, Skeleton, ToneIcon, cx } from '@/components/ui';
 
 type State = { status: 'idle' } | { status: 'loading' } | { status: 'error'; message: string } | { status: 'done'; query: string; results: SymbolCandidate[] };
@@ -103,7 +103,7 @@ export default function Home() {
       )}
 
       <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Cerca uno strumento</h1>
-      <p className="mt-1 text-muted">ETF o azioni: scrivi ISIN, ticker o nome.</p>
+      <p className="mt-1 text-muted">ETF, fondi o azioni: scrivi ISIN, ticker o nome.</p>
 
       <form onSubmit={submit} role="search" className="mt-5 flex gap-2">
         <label htmlFor="q" className="sr-only">
@@ -210,11 +210,11 @@ export default function Home() {
                 {recent.map((r) => (
                   <li key={r.symbol}>
                     <Link href={`/report/${encodeURIComponent(r.symbol)}`} className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-surface-2">
-                      <TypeBadge etf={r.type === 'ETF'} />
+                      <TypeBadge type={r.type} />
                       <span className="min-w-0 flex-1">
                         <span className="line-clamp-2 block font-medium leading-snug">{r.name}</span>
                         <span className="block text-sm text-muted">
-                          {r.symbol} · {r.type === 'ETF' ? 'ETF' : 'Azione'}
+                          {r.symbol} · {typeLabel(r.type)}
                         </span>
                       </span>
                       <Chevron />
@@ -267,16 +267,26 @@ function Examples({ onPick, compact }: { onPick: (q: string) => void; compact?: 
   );
 }
 
-function TypeBadge({ etf }: { etf: boolean }) {
+const BADGES: Record<InstrumentType, { text: string; className: string }> = {
+  ETF: { text: 'ETF', className: 'bg-accent-soft text-accent' },
+  FUND: {
+    text: 'FON',
+    className: 'bg-[color-mix(in_srgb,var(--bar-6)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-6)_70%,var(--text))]',
+  },
+  STOCK: {
+    text: 'AZ',
+    className: 'bg-[color-mix(in_srgb,var(--bar-2)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-2)_70%,var(--text))]',
+  },
+};
+
+function TypeBadge({ type }: { type: InstrumentType }) {
+  const b = BADGES[type];
   return (
     <span
       aria-hidden="true"
-      className={cx(
-        'grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[0.6875rem] font-bold tracking-wide',
-        etf ? 'bg-accent-soft text-accent' : 'bg-[color-mix(in_srgb,var(--bar-2)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-2)_70%,var(--text))]',
-      )}
+      className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[0.6875rem] font-bold tracking-wide', b.className)}
     >
-      {etf ? 'ETF' : 'AZ'}
+      {b.text}
     </span>
   );
 }
@@ -303,7 +313,7 @@ function Results({ results }: { results: SymbolCandidate[] }) {
               <div className="px-4 pt-3">
                 <p className="font-semibold leading-snug">{head.name}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <Chip tone="accent">{head.type === 'ETF' ? 'ETF' : 'Azione'}</Chip>
+                  <Chip tone="accent">{typeLabel(head.type)}</Chip>
                   {tags.map((t) => (
                     <Chip key={t} tone={t === 'Strategia con opzioni' ? 'warn' : 'bad'}>
                       {t}

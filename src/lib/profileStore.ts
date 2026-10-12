@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import type { InstrumentType } from './data/types';
 import type { InvestorProfile } from './profileFit';
 import { validateProfile } from './profileValidation';
 import { THEME_KEY, type ThemePref } from './theme';
@@ -98,14 +99,14 @@ const RECENT_MAX = 6;
 export interface RecentItem {
   symbol: string;
   name: string;
-  type: 'ETF' | 'STOCK';
+  type: InstrumentType;
 }
 
 function parseRecent(raw: string): RecentItem[] {
   try {
     const a = JSON.parse(raw);
     return Array.isArray(a)
-      ? a.filter((x) => x && typeof x.symbol === 'string' && typeof x.name === 'string' && (x.type === 'ETF' || x.type === 'STOCK')).slice(0, RECENT_MAX)
+      ? a.filter((x) => x && typeof x.symbol === 'string' && typeof x.name === 'string' && (x.type === 'ETF' || x.type === 'FUND' || x.type === 'STOCK')).slice(0, RECENT_MAX)
       : [];
   } catch {
     return [];

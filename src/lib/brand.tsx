@@ -1,7 +1,7 @@
 /** Brand constants and marks shared by the generated icons and share images (next/og). */
 
 export const SITE_NAME = 'Analisi Strumento';
-export const SITE_DESCRIPTION = 'Dati e confronti numerici su ETF e azioni rispetto al tuo profilo di investitore.';
+export const SITE_DESCRIPTION = 'Dati e confronti numerici su ETF, fondi e azioni rispetto al tuo profilo di investitore.';
 
 /** Shared Open Graph fields: a route's `openGraph` replaces the parent's instead of merging. */
 export const BASE_OPEN_GRAPH = { type: 'website', siteName: SITE_NAME, locale: 'it_IT' } as const;
