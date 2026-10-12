@@ -1,5 +1,7 @@
 export type InstrumentType = 'ETF' | 'FUND' | 'STOCK';
 
+export type AssetClass = 'equity' | 'bond' | 'mixed' | 'other' | 'unknown';
+
 export interface Holding {
   symbol?: string;
   name: string;
@@ -40,6 +42,9 @@ export interface InstrumentProfile {
   /** Company country (stocks), plain label */
   country?: string;
   fundamentals?: Fundamentals;
+  assetClass?: AssetClass;
+  /** Short Italian reason for the asset class, e.g. "Categoria Yahoo: EUR Diversified Bond" */
+  assetClassReason?: string;
 }
 
 export interface PricePoint {

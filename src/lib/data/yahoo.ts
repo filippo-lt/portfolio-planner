@@ -1,5 +1,6 @@
 import YahooFinance from 'yahoo-finance2';
 import type { DataProvider } from './provider';
+import { classifyAssetClass } from '../assetClass';
 import type {
   Allocation,
   Fundamentals,
@@ -60,6 +61,9 @@ const MIN_STOCK_SHARE = 0.1;
 
 const num = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+
+const str = (v: unknown): string | undefined =>
+  typeof v === 'string' && v.trim() ? v.trim() : undefined;
 
 function mapType(quoteType: unknown): InstrumentType | undefined {
   if (quoteType === 'ETF') return 'ETF';
@@ -225,6 +229,16 @@ export class YahooProvider implements DataProvider {
       const country = s?.assetProfile?.country;
       if (country) profile.country = country;
     }
+    const { assetClass, reason } = classifyAssetClass({
+      type,
+      name: profile.name,
+      category: str(s?.fundProfile?.categoryName),
+      stockPosition: num(s?.topHoldings?.stockPosition),
+      bondPosition: num(s?.topHoldings?.bondPosition),
+      cashPosition: num(s?.topHoldings?.cashPosition),
+    });
+    profile.assetClass = assetClass;
+    profile.assetClassReason = reason;
     return profile;
   }
 
