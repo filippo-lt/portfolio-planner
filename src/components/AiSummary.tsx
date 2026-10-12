@@ -29,21 +29,26 @@ export function AiSummary({ report, fit, level }: { report: Report; fit: FitStat
 
   if (state?.key === key && !state.summary) return null; // not configured or not validated: hidden
   return (
-    <section aria-labelledby="h-ai" className="mt-8">
-      <h2 id="h-ai" className="text-xl font-semibold">
-        Riepilogo (AI)
+    <section aria-labelledby="h-ai" className="card mt-4 rounded-2xl border border-line bg-surface p-4">
+      <h2 id="h-ai" className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 text-accent">
+          <path d="M10 2.5l1.6 4.4 4.4 1.6-4.4 1.6L10 14.5l-1.6-4.4L4 8.5l4.4-1.6L10 2.5Z" fill="currentColor" />
+        </svg>
+        In sintesi
       </h2>
       {state?.key === key ? (
         <>
-          <p className="mt-2">{state.summary}</p>
-          <p className="mt-1 text-sm text-slate-700">
-            Testo generato automaticamente a partire dai soli numeri di questo report; i valori sono verificati sui dati.
+          <p className="mt-2 leading-relaxed">{state.summary}</p>
+          <p className="mt-2 text-xs text-muted">
+            Testo generato automaticamente (AI) a partire dai soli numeri di questo report; i valori sono verificati sui dati.
           </p>
         </>
       ) : (
-        <p role="status" className="mt-2 text-slate-700">
-          Riepilogo in preparazione…
-        </p>
+        <div role="status" aria-label="Riepilogo in preparazione" className="mt-3 space-y-2">
+          <div className="skeleton h-4 w-full" />
+          <div className="skeleton h-4 w-11/12" />
+          <div className="skeleton h-4 w-2/3" />
+        </div>
       )}
     </section>
   );

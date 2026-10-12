@@ -35,8 +35,8 @@ export interface FitStatement {
 }
 
 export const STATUS_LABEL: Record<FitStatus, string> = {
-  entro: 'entro la soglia indicata',
-  oltre: 'oltre la soglia indicata',
+  entro: 'entro la soglia che hai indicato',
+  oltre: 'sopra la soglia che hai indicato',
   info: 'informazione',
 };
 
@@ -50,6 +50,8 @@ const it = (n: number, digits = 1) =>
 
 const points = (n: number) => `${it(n)} ${n === 1 ? 'punto' : 'punti'}`;
 
+const BAND_RANGE = { breve: 'meno di 3 anni', medio: 'da 3 a 10 anni', lungo: 'oltre 10 anni' } as const;
+
 export function horizonBand(years: number): 'breve' | 'medio' | 'lungo' {
   if (years < 3) return 'breve';
   if (years <= 10) return 'medio';
@@ -61,7 +63,7 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
 
   // Drawdown vs tolerance
   if (m.maxDrawdown === undefined) {
-    out.push({ id: 'drawdown', status: 'info', text: `Drawdown massimo storico: ${NA}.` });
+    out.push({ id: 'drawdown', status: 'info', text: `Perdita massima storica: ${NA}.` });
   } else {
     const dd = Math.round(m.maxDrawdown * 100);
     const tol = -Math.abs(profile.maxDrawdownPct);
@@ -70,7 +72,7 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
       out.push({
         id: 'drawdown',
         status: 'oltre',
-        text: `Il drawdown massimo storico (${it(dd)}%) supera la tolleranza indicata (${it(tol)}%) di ${points(diff)}. La tolleranza è riferita all'intero portafoglio.`,
+        text: `La perdita massima storica (${it(dd)}%) supera la soglia indicata (${it(tol)}%) di ${points(diff)}. La soglia è riferita all'intero portafoglio.`,
       });
     } else {
       out.push({
@@ -78,8 +80,8 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
         status: 'entro',
         text:
           diff === 0
-            ? `Il drawdown massimo storico (${it(dd)}%) coincide con la tolleranza indicata (${it(tol)}%). La tolleranza è riferita all'intero portafoglio.`
-            : `Il drawdown massimo storico (${it(dd)}%) è inferiore alla tolleranza indicata (${it(tol)}%) di ${points(diff)}. La tolleranza è riferita all'intero portafoglio.`,
+            ? `La perdita massima storica (${it(dd)}%) coincide con la soglia indicata (${it(tol)}%). La soglia è riferita all'intero portafoglio.`
+            : `La perdita massima storica (${it(dd)}%) è inferiore alla soglia indicata (${it(tol)}%) di ${points(diff)}. La soglia è riferita all'intero portafoglio.`,
       });
     }
   }
@@ -92,7 +94,7 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
     out.push({
       id: 'volatility',
       status: 'info',
-      text: `Volatilità annua ${pct(m.volatility)}; orizzonte indicato ${it(profile.horizonYears)} ${profile.horizonYears === 1 ? 'anno' : 'anni'} (orizzonte ${band}).`,
+      text: `Volatilità annua ${pct(m.volatility)}; orizzonte indicato ${it(profile.horizonYears)} ${profile.horizonYears === 1 ? 'anno' : 'anni'} (orizzonte ${band}: ${BAND_RANGE[band]}).`,
     });
   }
 
@@ -112,7 +114,7 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
       out.push({
         id: 'rolling',
         status: 'info',
-        text: `Su finestre mobili di ${it(h)} ${h === 1 ? 'anno' : 'anni'} (${it(range.count, 0)} osservazioni mensili, storico di ${availTxt} anni) il rendimento annualizzato storico è andato da ${pct(range.worst, 1)} a ${pct(range.best, 1)}.`,
+        text: `Considerando ogni periodo di ${it(h)} ${h === 1 ? 'anno' : 'anni'} nello storico (finestre mobili di ${it(h)} ${h === 1 ? 'anno' : 'anni'}: ${it(range.count, 0)} osservazioni mensili su ${availTxt} anni), il rendimento annuo è andato da ${pct(range.worst, 1)} a ${pct(range.best, 1)}.`,
       });
     }
   }
@@ -130,7 +132,7 @@ export function profileFit(profile: InvestorProfile, m: FitInput): FitStatement[
     out.push({
       id: 'currency',
       status: 'info',
-      text: `Lo strumento è quotato in ${m.currency}: esposizione al cambio EUR/${m.currency}. Un ETF quotato in EUR può comunque detenere attività in altre valute.`,
+      text: `Lo strumento è quotato in ${m.currency}: esposizione al cambio EUR/${m.currency}. Anche uno strumento quotato in EUR può detenere attività in altre valute.`,
     });
   }
 
