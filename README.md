@@ -2,6 +2,8 @@
 
 Web app (Next.js App Router, TypeScript, Tailwind; UI in Italian). An investor enters an ETF or stock (ISIN or ticker) and gets a neutral, number-based report comparing the instrument with their own profile. `SPEC.md` is the source of truth.
 
+Detailed documentation with diagrams is in [`docs/`](docs/README.md): business logic, architecture, data structures and technical details.
+
 ## Hard rules
 - Not a trading platform, not a portfolio builder, not financial education.
 - Facts and numbers only: no opinions or verdicts, no suggestions about what to buy or sell.
