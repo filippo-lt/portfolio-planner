@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { clearRecentReports, flash, useInvestorProfile, useRecentReports } from '@/lib/profileStore';
 import type { SymbolCandidate } from '@/lib/data/types';
 import { exchangeLabel, nameTags } from '@/lib/labels';
-import { Button, Chip, PageLoading, Skeleton, cx } from '@/components/ui';
+import { Button, Callout, Chip, PageLoading, Skeleton, ToneIcon, cx } from '@/components/ui';
 
 type State = { status: 'idle' } | { status: 'loading' } | { status: 'error'; message: string } | { status: 'done'; query: string; results: SymbolCandidate[] };
 
@@ -91,18 +91,15 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-2xl">
       {welcome && (
-        <div role="status" className="rise mb-5 flex items-start gap-3 rounded-2xl bg-accent-soft p-4">
-          <svg viewBox="0 0 20 20" aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-accent">
-            <path d="M4.5 10.5 8.5 14.5 15.5 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <p className="text-sm">
-            <strong className="font-semibold">Profilo pronto.</strong> Ora cerca lo strumento che vuoi analizzare. Il profilo si modifica in ogni momento da{' '}
+        <Callout tone="good" role="status" className="rise mb-5 rounded-2xl p-4">
+          <p>
+            <strong className="font-semibold text-success">Profilo pronto.</strong> Ora cerca lo strumento che vuoi analizzare. Il profilo si modifica in ogni momento da{' '}
             <Link href="/profilo" className="font-medium text-accent underline underline-offset-2">
               Profilo
             </Link>
             .
           </p>
-        </div>
+        </Callout>
       )}
 
       <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Cerca uno strumento</h1>
@@ -164,8 +161,11 @@ export default function Home() {
         )}
 
         {state.status === 'error' && (
-          <div className="card rise rounded-2xl border border-line bg-surface p-4">
-            <p className="font-medium">{state.message}</p>
+          <div className="card rise rounded-2xl border border-line border-l-4 border-l-error bg-surface p-4">
+            <p className="flex items-start gap-2 font-medium">
+              <ToneIcon tone="bad" className="mt-0.5 h-5 w-5 text-error" />
+              {state.message}
+            </p>
             <Button variant="secondary" className="mt-3" onClick={() => run(q)}>
               Riprova
             </Button>
@@ -173,8 +173,11 @@ export default function Home() {
         )}
 
         {state.status === 'done' && state.results.length === 0 && (
-          <div className="card rise rounded-2xl border border-line bg-surface p-5">
-            <p className="font-semibold">Nessun risultato per “{state.query}”</p>
+          <div className="card rise rounded-2xl border border-line border-l-4 border-l-warn bg-surface p-5">
+            <p className="flex items-start gap-2 font-semibold">
+              <ToneIcon tone="worry" className="mt-0.5 h-5 w-5 text-warn" />
+              Nessun risultato per “{state.query}”
+            </p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
               <li>Controlla l&apos;ISIN: sono 12 caratteri, es. IE00BK5BQT80.</li>
               <li>Prova con il ticker (es. AAPL) o con una parte del nome.</li>
@@ -207,6 +210,7 @@ export default function Home() {
                 {recent.map((r) => (
                   <li key={r.symbol}>
                     <Link href={`/report/${encodeURIComponent(r.symbol)}`} className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-surface-2">
+                      <TypeBadge etf={r.type === 'ETF'} />
                       <span className="min-w-0 flex-1">
                         <span className="line-clamp-2 block font-medium leading-snug">{r.name}</span>
                         <span className="block text-sm text-muted">
@@ -229,7 +233,7 @@ export default function Home() {
             </section>
           )}
           {recent.length === 0 && (
-            <section aria-labelledby="h-ex" className="rounded-2xl border border-dashed border-line p-5">
+            <section aria-labelledby="h-ex" className="rounded-2xl border border-dashed border-accent/30 bg-accent-soft/40 p-5">
               <h2 id="h-ex" className="font-semibold">
                 Non sai da dove iniziare?
               </h2>
@@ -253,13 +257,27 @@ function Examples({ onPick, compact }: { onPick: (q: string) => void; compact?: 
           key={e.q}
           type="button"
           onClick={() => onPick(e.q)}
-          className="pressable inline-flex min-h-11 flex-col items-start justify-center rounded-xl border border-line bg-surface px-3 py-1.5 text-left hover:border-line-strong"
+          className="pressable inline-flex min-h-11 flex-col items-start justify-center rounded-xl border border-accent/25 bg-surface px-3 py-1.5 text-left hover:border-accent/60 hover:bg-accent-soft"
         >
-          <span className="text-sm font-semibold">{e.label}</span>
+          <span className="text-sm font-semibold text-accent">{e.label}</span>
           <span className="text-xs text-muted">{e.note}</span>
         </button>
       ))}
     </div>
+  );
+}
+
+function TypeBadge({ etf }: { etf: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        'grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[0.6875rem] font-bold tracking-wide',
+        etf ? 'bg-accent-soft text-accent' : 'bg-[color-mix(in_srgb,var(--bar-2)_16%,transparent)] text-[color-mix(in_srgb,var(--bar-2)_70%,var(--text))]',
+      )}
+    >
+      {etf ? 'ETF' : 'AZ'}
+    </span>
   );
 }
 
@@ -287,7 +305,7 @@ function Results({ results }: { results: SymbolCandidate[] }) {
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   <Chip tone="accent">{head.type === 'ETF' ? 'ETF' : 'Azione'}</Chip>
                   {tags.map((t) => (
-                    <Chip key={t} tone="warn">
+                    <Chip key={t} tone={t === 'Strategia con opzioni' ? 'warn' : 'bad'}>
                       {t}
                     </Chip>
                   ))}
