@@ -24,7 +24,7 @@ function FeeInput({ label, stored, onSave }: { label: string; stored: number | u
   const parsed = parseFeeInput(text);
   return (
     <div className="mt-1.5">
-      <label htmlFor={id} className="block text-xs text-muted">
+      <label htmlFor={id} className="block text-sm text-muted">
         {label}
       </label>
       <input
@@ -68,7 +68,7 @@ export function FeeRows({
 }) {
   const canEdit = !!onUserFees && !!dataMissing;
   return (
-    <div className="mt-3 border-t border-line pt-2 text-xs">
+    <div className="mt-3 border-t border-line pt-2 text-sm">
       <dl className="space-y-1">
         <div className="flex justify-between gap-2">
           <dt className="text-muted">Commissione di ingresso</dt>

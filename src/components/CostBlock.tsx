@@ -3,11 +3,12 @@ import { terCostPerYear } from '@/lib/costs';
 import { NA } from '@/lib/profileFit';
 import { fmtEur, fmtPct } from '@/lib/format';
 import { terTone } from '@/lib/tone';
-import { TONE_TEXT, TonePill, cx } from './ui';
+import type { EffectiveFees } from '@/lib/fees';
+import { Disclosure, TONE_TEXT, TonePill, cx } from './ui';
 
-const BADGE = { good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined } as const;
+export const TER_BADGE = { good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined } as const;
 
-function Side({ title, ter, amount, isStock }: { title: string; amount: number; ter: number | undefined; isStock?: boolean }) {
+function Side({ title, ter, amount }: { title: string; amount: number; ter: number | undefined }) {
   const tone = terTone(ter);
   const cost = terCostPerYear(amount, ter);
   const missing = ter === undefined;
@@ -20,31 +21,28 @@ function Side({ title, ter, amount, isStock }: { title: string; amount: number; 
           missing ? 'text-base font-medium text-muted' : cx('text-[1.75rem] font-semibold leading-tight tracking-tight', TONE_TEXT[tone]),
         )}
       >
-        {isStock ? 'Non previsto' : missing ? NA : fmtPct(ter, 2)}
+        {missing ? 'TER non disponibile' : fmtPct(ter, 2)}
       </dd>
-      {!isStock && !missing && BADGE[tone] && (
+      {!missing && TER_BADGE[tone] && (
         <dd className="mt-1.5">
-          <TonePill tone={tone}>{BADGE[tone]}</TonePill>
+          <TonePill tone={tone}>{TER_BADGE[tone]}</TonePill>
         </dd>
       )}
-      <dd className="mt-1.5 text-xs text-muted">
-        {isStock
-          ? 'Il TER si applica ai fondi e agli ETF, non alle azioni.'
-          : cost === undefined
-            ? NA
-            : `Su ${fmtEur(amount)} il TER costa circa ${fmtEur(cost)} all'anno`}
-      </dd>
+      <dd className="mt-1.5 text-sm text-muted">{cost === undefined ? NA : `Su ${fmtEur(amount)} il TER costa circa ${fmtEur(cost)} all'anno`}</dd>
     </div>
   );
 }
 
-/** Cost card: fund and reference TER side by side. Entry/exit fee rows go in each side's slot. */
+const feePct = (f: EffectiveFees['entry']) => (f ? fmtPct(f.value, 2) : 'n.d.');
+
+/** Collapsed cost block: fund and reference TER side by side. Entry/exit fee rows go in each side's slot. */
 export function CostBlock({
   fundTer,
   benchTer,
   amount,
-  isStock,
+  fees,
   benchLabel,
+  defaultOpen,
   fundExtra,
   benchExtra,
 }: {
@@ -52,26 +50,30 @@ export function CostBlock({
   benchTer: number | undefined;
   /** User amount in euros */
   amount: number;
-  isStock: boolean;
+  /** The fund's effective fees, for the collapsed summary */
+  fees: EffectiveFees;
   benchLabel?: string;
+  /** Open from the start when a fee is missing and can be entered, or a performance fee changes the result */
+  defaultOpen?: boolean;
   /** Extra rows under the fund / reference figures (fees) */
   fundExtra?: ReactNode;
   benchExtra?: ReactNode;
 }) {
+  const cost = terCostPerYear(amount, fundTer);
+  const preview = `${fundTer === undefined ? 'TER non disponibile' : `TER ${fmtPct(fundTer, 2)}${cost === undefined ? '' : ` (≈ ${fmtEur(cost)} l'anno su ${fmtEur(amount)})`}`} · ingresso ${feePct(fees.entry)} · uscita ${feePct(fees.exit)}`;
   return (
-    <div className="card mt-4 rounded-2xl border border-line bg-surface p-3.5">
-      <h2 className="text-sm font-semibold">Costi</h2>
-      <p className="mt-0.5 text-xs text-muted">Spese correnti, già incluse nel prezzo.</p>
-      <dl className="mt-3 grid grid-cols-2 gap-3">
-        <Side title="Questo strumento" amount={amount} ter={fundTer} isStock={isStock} />
-        <Side title={benchLabel ? `Riferimento · ${benchLabel}` : 'Riferimento'} ter={benchTer} amount={amount} />
+    <Disclosure id="h-cost" title="Costi e commissioni" preview={preview} defaultOpen={defaultOpen}>
+      <p className="text-sm text-muted">Spese correnti, già incluse nel prezzo.{benchLabel ? ` Riferimento: ${benchLabel}.` : ''}</p>
+      <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Side title="Questo strumento" amount={amount} ter={fundTer} />
+        <Side title="Riferimento" ter={benchTer} amount={amount} />
       </dl>
       {(fundExtra || benchExtra) && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-x-3 sm:grid-cols-2">
           <div className="min-w-0">{fundExtra}</div>
           <div className="min-w-0">{benchExtra}</div>
         </div>
       )}
-    </div>
+    </Disclosure>
   );
 }
