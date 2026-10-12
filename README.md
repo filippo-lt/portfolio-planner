@@ -1,6 +1,6 @@
 # Analisi Strumento
 
-Web app (Next.js App Router, TypeScript, Tailwind; UI in Italian). An investor enters an ETF or stock (ISIN or ticker) and gets a neutral, number-based report comparing the instrument with their own profile. `SPEC.md` is the source of truth.
+Web app (Next.js App Router, TypeScript, Tailwind; UI in Italian). An investor enters an ETF, mutual fund or stock (ISIN or ticker) and gets a neutral, number-based report comparing the instrument with their own profile. `SPEC.md` is the source of truth.
 
 Detailed documentation with diagrams is in [`docs/`](docs/README.md): business logic, architecture, data structures and technical details.
 
@@ -28,6 +28,7 @@ Without `ANTHROPIC_API_KEY` the "Riepilogo (AI)" section is simply hidden.
 - Yahoo Finance through the unofficial `yahoo-finance2` package; OpenFIGI maps ISIN to ticker/exchange when Yahoo search does not find the listing. EUR listings are listed first.
 - Unofficial and unguaranteed: endpoints can change or rate-limit.
 - Patchy fields: TER is missing for many European ETFs; Yahoo exposes no country split for ETFs; ETF holdings are limited to about 10; stock sector/country are plain labels, not splits.
+- Mutual funds come from Yahoo's Morningstar listings (`0P…` symbols, often on German exchanges): price history can be shorter than for ETFs, holdings are often just a few lines, and sector splits are hidden when the fund holds almost no equity.
 - Prices are in each instrument's listing currency; comparison with the benchmark ignores FX (a note says so).
 - To switch provider (e.g. EODHD), implement `DataProvider` (`src/lib/data/provider.ts`: `resolve`, `getProfile`, `getHistory`) and swap it in `src/lib/report.ts`.
 

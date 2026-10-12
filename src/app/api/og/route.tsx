@@ -1,4 +1,4 @@
-import { exchangeLabel } from '@/lib/labels';
+import { exchangeLabel, typeLabel } from '@/lib/labels';
 import { SYMBOL_RE } from '@/lib/report';
 import { shareCard } from '@/lib/shareCard';
 import { shareProfile } from '@/lib/shareProfile';
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   const symbol = new URL(req.url).searchParams.get('symbol')?.trim();
   if (!symbol || !SYMBOL_RE.test(symbol)) return new Response('Simbolo non valido', { status: 400 });
   const profile = await shareProfile(symbol);
-  const chips = [symbol, profile && (profile.type === 'ETF' ? 'ETF' : 'Azione'), exchangeLabel(profile?.exchange)].filter((c): c is string => !!c);
+  const chips = [symbol, profile && typeLabel(profile.type), exchangeLabel(profile?.exchange)].filter((c): c is string => !!c);
   const image = shareCard({
     title: profile?.name ?? symbol,
     subtitle: 'Rendimenti, volatilità e drawdown a confronto con il benchmark.',

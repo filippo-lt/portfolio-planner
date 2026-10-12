@@ -70,7 +70,7 @@ function slimReport(report: any) {
     instrument: {
       symbol: pickStr(i.symbol, 20),
       name: pickStr(i.name),
-      type: i.type === 'ETF' ? 'ETF' : 'STOCK',
+      type: i.type === 'ETF' || i.type === 'FUND' ? i.type : 'STOCK',
       currency: pickStr(i.currency, 6),
       exchange: pickStr(i.exchange, 40),
       isin: pickStr(i.isin, 12),

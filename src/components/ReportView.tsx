@@ -9,7 +9,7 @@ import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profile
 import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
 import { clearBenchmarkPref, pushRecentReport, useBenchmarkPref, useInvestorProfile } from '@/lib/profileStore';
-import { countryLabel, exchangeLabel, nameTags, sectorLabel } from '@/lib/labels';
+import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
 import { AiSummary } from './AiSummary';
 import {
@@ -311,7 +311,7 @@ export function ReportView({ symbol }: { symbol: string }) {
   const sameFund = !!benchOk && !sameAsBench && benchOk.profile.name === ins.name;
   const best = bestReturn(m);
   const dd = m.maxDrawdown;
-  const isEtf = ins.type === 'ETF';
+  const isStock = ins.type === 'STOCK';
   const benchPreset = PRESETS.find((p) => p.symbol === bench);
   const ddTol = -Math.abs(profile.maxDrawdownPct);
   const ddTone = drawdownTone(dd?.value, profile.maxDrawdownPct);
@@ -350,7 +350,7 @@ export function ReportView({ symbol }: { symbol: string }) {
           />,
         ]
       : []),
-    ...(!isEtf
+    ...(isStock
       ? [<Figure key="ter" label="Costo annuo (TER)" value="Non previsto" note="Il TER si applica ai fondi e agli ETF, non alle azioni." />]
       : [
           <Figure
@@ -377,7 +377,7 @@ export function ReportView({ symbol }: { symbol: string }) {
           <header>
             <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <Chip tone="accent">{isEtf ? 'ETF' : 'Azione'}</Chip>
+              <Chip tone="accent">{typeLabel(ins.type)}</Chip>
               {ins.currency && <Chip>{ins.currency}</Chip>}
               {ins.exchange && <Chip>{exchangeLabel(ins.exchange)}</Chip>}
               {ins.sector && <Chip>{sectorLabel(ins.sector)}</Chip>}
@@ -586,7 +586,7 @@ export function ReportView({ symbol }: { symbol: string }) {
             </div>
           </Section>
 
-          {(ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || ins.type === 'ETF'))) && rank >= 1 && (
+          {(ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1 && (
             <Section id="h-comp" title="Composizione">
               <Composition ins={ins} full={rank >= 2} />
             </Section>
@@ -795,7 +795,7 @@ function Composition({ ins, full }: { ins: InstrumentProfile; full: boolean }) {
   const sectors = ins.sectors ? (full ? ins.sectors : ins.sectors.slice(0, 5)) : undefined;
   const facts: [string, string][] = [];
   if (full && ins.country) facts.push(['Paese', countryLabel(ins.country)]);
-  if (full && ins.type === 'ETF' && !ins.countries) facts.push(['Ripartizione per paese', NA]);
+  if (full && ins.type !== 'STOCK' && !ins.countries) facts.push(['Ripartizione per paese', NA]);
   return (
     <div className="space-y-4">
       {(holdings || sectors || (full && ins.countries)) && (

@@ -1,6 +1,6 @@
 # Analisi Strumento – MVP spec
 
-Web app (Next.js App Router + TypeScript + Tailwind, UI in **Italian**). An investor enters an ETF or stock (ISIN or ticker) and gets a neutral, number-based report on how the instrument fits their investor profile.
+Web app (Next.js App Router + TypeScript + Tailwind, UI in **Italian**). An investor enters an ETF, mutual fund or stock (ISIN or ticker) and gets a neutral, number-based report on how the instrument fits their investor profile.
 
 ## Hard rules
 - Not a trading platform (no buy/sell/deposit), not a portfolio builder (never suggest what to buy), not financial education.
@@ -20,8 +20,8 @@ Web app (Next.js App Router + TypeScript + Tailwind, UI in **Italian**). An inve
 3. Report page `/report/[symbol]`.
 
 ## Report (computed in code)
-- name, type (ETF/Azione), currency, exchange
-- TER / ongoing charges (ETF)
+- name, type (ETF/Fondo/Azione), currency, exchange
+- TER / ongoing charges (ETF, fund)
 - annualized return 1y/3y/5y, annualized volatility (daily log/simple returns × √252), historical max drawdown (on all available history, ≥5y requested)
 - benchmark comparison (default VWCE.DE – Vanguard FTSE All-World UCITS ETF Acc; user can change ticker): return, volatility, drawdown side by side + price chart of both rebased to 100
 - top holdings, sector and country split if available

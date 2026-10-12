@@ -1,3 +1,11 @@
+import type { InstrumentType } from './data/types';
+
+const TYPES: Record<InstrumentType, string> = { ETF: 'ETF', FUND: 'Fondo', STOCK: 'Azione' };
+
+export function typeLabel(t: InstrumentType): string {
+  return TYPES[t];
+}
+
 /** Human labels for Yahoo exchange codes (fallback: the raw code). */
 const EXCHANGES: Record<string, string> = {
   Milan: 'Borsa Italiana',

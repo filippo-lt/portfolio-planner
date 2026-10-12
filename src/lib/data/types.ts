@@ -1,4 +1,4 @@
-export type InstrumentType = 'ETF' | 'STOCK';
+export type InstrumentType = 'ETF' | 'FUND' | 'STOCK';
 
 export interface Holding {
   symbol?: string;

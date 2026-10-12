@@ -56,11 +56,14 @@ const SECTOR_LABELS: Record<string, string> = {
   healthcare: 'Sanità',
 };
 
+const MIN_STOCK_SHARE = 0.1;
+
 const num = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isFinite(v) ? v : undefined;
 
 function mapType(quoteType: unknown): InstrumentType | undefined {
   if (quoteType === 'ETF') return 'ETF';
+  if (quoteType === 'MUTUALFUND') return 'FUND';
   if (quoteType === 'EQUITY') return 'STOCK';
   return undefined;
 }
@@ -182,7 +185,7 @@ export class YahooProvider implements DataProvider {
       exchange: price.exchangeName ?? price.exchange ?? '',
     };
 
-    if (type === 'ETF') {
+    if (type !== 'STOCK') {
       const ter =
         num(s?.fundProfile?.feesExpensesInvestment?.annualReportExpenseRatio) ??
         num(s?.summaryDetail?.annualReportExpenseRatio) ??
@@ -198,15 +201,18 @@ export class YahooProvider implements DataProvider {
         .filter((h: any) => h.name && h.weight !== undefined);
       if (holdings.length) profile.holdings = holdings;
 
+      // Sector weights cover only the equity part; for bond or money-market funds Yahoo returns
+      // placeholder values (e.g. 100% real estate), so skip them when there is almost no equity.
+      const stockShare = num(s?.topHoldings?.stockPosition);
       const sectors: Allocation[] = [];
-      for (const row of s?.topHoldings?.sectorWeightings ?? []) {
+      for (const row of stockShare !== undefined && stockShare < MIN_STOCK_SHARE ? [] : (s?.topHoldings?.sectorWeightings ?? [])) {
         for (const [k, v] of Object.entries(row)) {
           const w = num(v);
-          if (w !== undefined) sectors.push({ name: SECTOR_LABELS[k] ?? k, weight: w });
+          if (w) sectors.push({ name: SECTOR_LABELS[k] ?? k, weight: w });
         }
       }
       if (sectors.length) profile.sectors = sectors.sort((a, b) => b.weight - a.weight);
-      // Yahoo does not expose country breakdown for ETFs: left undefined.
+      // Yahoo does not expose country breakdown for ETFs and funds: left undefined.
     } else {
       const f = await this.getFundamentals(symbol);
       if (f) {

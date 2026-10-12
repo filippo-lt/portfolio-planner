@@ -307,7 +307,7 @@ function Onboarding() {
               <path d="M4 17l5-5 4 4 7-8" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
-          <h1 className="mt-5 text-3xl font-semibold tracking-tight">Capisci i numeri di un ETF o di un&apos;azione, rispetto a te.</h1>
+          <h1 className="mt-5 text-3xl font-semibold tracking-tight">Capisci i numeri di un ETF, di un fondo o di un&apos;azione, rispetto a te.</h1>
           <p className="mt-3 text-lg text-muted">
             Cerchi uno strumento e ottieni un report con dati e confronti numerici, messi in relazione con il tuo profilo.
           </p>
