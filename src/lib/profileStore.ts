@@ -7,6 +7,7 @@ import { isTaxCountry } from './tax';
 import type { TaxCountry } from './tax/types';
 import { parseUserFees, type UserFees } from './fees';
 import { validateProfile } from './profileValidation';
+import { DEFAULT_FX_COST, MAX_FX_COST } from './fx';
 import { DEFAULT_SIM_AMOUNT, MAX_SIM_AMOUNT } from './simulation';
 import { THEME_KEY, type ThemePref } from './theme';
 
@@ -14,6 +15,7 @@ const PROFILE_KEY = 'investorProfile';
 const BENCH_KEY = 'benchmarkSymbol';
 const FEES_KEY = 'feeOverrides';
 const AMOUNT_KEY = 'simAmount';
+const FX_COST_KEY = 'fxCost';
 const VERSION = 1;
 const LOADING = '__loading__';
 
@@ -187,6 +189,22 @@ export function useSimAmount(): [number, (amount: number) => void] {
   return [amount, set];
 }
 
+const validFxCost = (v: number) => Number.isFinite(v) && v >= 0 && v <= MAX_FX_COST;
+
+/** FX spread per conversion as a fraction; default 0,25%. `isUser` tells whether the user entered it. */
+export function useFxCost(): [number, (cost: number) => void, boolean] {
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(FX_COST_KEY) ?? '',
+    () => '',
+  );
+  const isUser = raw !== '' && validFxCost(Number(raw));
+  const set = useCallback((next: number) => {
+    if (validFxCost(next)) write(FX_COST_KEY, String(next));
+  }, []);
+  return [isUser ? Number(raw) : DEFAULT_FX_COST, set, isUser];
+}
+
 /* Recently opened reports, newest first. */
 const RECENT_KEY = 'recentReports';
 const RECENT_MAX = 6;
@@ -249,7 +267,7 @@ export function setThemePref(p: ThemePref) {
 
 /** Wipes everything the app saved on this device except the appearance choice. */
 export function clearAllUserData() {
-  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY, FEES_KEY, AMOUNT_KEY]) {
+  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY, FEES_KEY, AMOUNT_KEY, FX_COST_KEY]) {
     try {
       localStorage.removeItem(key);
     } catch {

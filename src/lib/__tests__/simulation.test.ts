@@ -86,3 +86,44 @@ describe('parseSimAmount', () => {
     expect(parseSimAmount('10.000.000')).toBe(10_000_000);
   });
 });
+
+describe('simulate with currency conversion', () => {
+  const rates = px([
+    ['2022-12-30', 1.1],
+    ['2024-12-31', 1.25],
+  ]);
+  it('converts at start and end rates with the spread twice', () => {
+    const r = simulate({ amount: 1000, prices: series, fx: { rates, cost: 0.01 } })!;
+    // 1000 * 1.1 * 0.99 = 1089 USD -> *1.21 = 1317.69 USD -> /1.25 * 0.99 = 1043.6
+    expect(r.netValue).toBeCloseTo((1000 * 1.1 * 0.99 * 1.21 * 0.99) / 1.25, 6);
+    const noSpread = (1000 * 1.1 * 1.21) / 1.25;
+    expect(r.fx!.costEur).toBeCloseTo(noSpread - r.netValue, 6);
+    expect(r.fx).toMatchObject({ startRate: 1.1, startRateDate: '2022-12-30', endRate: 1.25, endRateDate: '2024-12-31', cost: 0.01 });
+    expect(r.gainEur).toBeCloseTo(r.netValue - 1000, 6);
+  });
+  it('zero spread has zero cost', () => {
+    const r = simulate({ amount: 1000, prices: series, fx: { rates, cost: 0 } })!;
+    expect(r.fx!.costEur).toBeCloseTo(0, 9);
+    expect(r.netValue).toBeCloseTo((1000 * 1.1 * 1.21) / 1.25, 6);
+  });
+  it('takes the entry fee in EUR before converting and the exit fee on the converted-back value', () => {
+    const r = simulate({ amount: 1000, prices: series, entryFee: 0.02, exitFee: 0.01, fx: { rates, cost: 0 } })!;
+    expect(r.entryFeeEur).toBeCloseTo(20);
+    expect(r.grossValue).toBeCloseTo((980 * 1.1 * 1.21) / 1.25, 6);
+    expect(r.exitFeeEur).toBeCloseTo(r.grossValue * 0.01, 6);
+  });
+  it('converts dividends of a distributing product at the end rate', () => {
+    const raw = px([['2023-01-02', 100], ['2024-01-02', 110], ['2025-01-02', 121]]);
+    const r = simulate({ amount: 1000, prices: series, rawPrices: raw, dividends: [{ date: '2024-06-01', amount: 2 }], fx: { rates, cost: 0 } })!;
+    const k = 1.1 / 1.25;
+    expect(r.dividendsEur).toBeCloseTo(10 * 2 * k, 6);
+    expect(r.netValue).toBeCloseTo((1000 * 1.21 + 20) * k, 6);
+  });
+  it('stays unconverted when a rate is missing or too old', () => {
+    const stale = px([['2022-06-01', 1.1], ['2024-12-31', 1.25]]);
+    const r = simulate({ amount: 1000, prices: series, fx: { rates: stale, cost: 0.0025 } })!;
+    expect(r.fx).toBeUndefined();
+    expect(r.netValue).toBeCloseTo(1210);
+    expect(simulate({ amount: 1000, prices: series })!.fx).toBeUndefined();
+  });
+});

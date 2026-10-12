@@ -9,7 +9,7 @@ import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchma
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
 import { drawdownTone, fitReading, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
-import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useInvestorProfile, useSimAmount } from '@/lib/profileStore';
+import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useFxCost, useInvestorProfile, useSimAmount } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
 import { CostBlock } from './CostBlock';
@@ -166,6 +166,7 @@ export function ReportView({ symbol }: { symbol: string }) {
   const [benchPrefs, setBenchPref, clearBenchPref] = useBenchmarkPrefs();
   const [userFees, setUserFees] = useFeeOverride(symbol);
   const [simAmount, setSimAmount] = useSimAmount();
+  const [fxCost, setFxCost, fxCostIsUser] = useFxCost();
   const [showOptional, setShowOptional] = useState(false);
   const [custom, setCustom] = useState('');
   const [benchMsg, setBenchMsg] = useState<string>();
@@ -398,6 +399,9 @@ export function ReportView({ symbol }: { symbol: string }) {
           <EuroVerdict
             amount={simAmount}
             onAmount={setSimAmount}
+            fxCost={fxCost}
+            onFxCost={setFxCost}
+            fxCostIsUser={fxCostIsUser}
             taxCountry={profile.taxCountry}
             fund={{
               // without a reference there is no common period: fall back to the monthly closes
@@ -407,13 +411,14 @@ export function ReportView({ symbol }: { symbol: string }) {
               currency: ins.currency,
               distribution: ins.distribution,
               dist: report.dist?.instrument,
+              fx: report.fx?.instrument,
               type: ins.type,
               assetClass: ins.assetClass,
               govtShare: findBenchmark(ins.symbol)?.govtShare,
             }}
             reference={
               benchOk && !sameAsBench && report.chart.length > 0
-                ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
+                ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
                 : undefined
             }
             referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}

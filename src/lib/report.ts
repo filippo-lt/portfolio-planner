@@ -6,6 +6,7 @@ import type { DataProvider } from './data/provider';
 import { effectiveFees } from './fees';
 import { fmtEur, fmtMonthYear } from './format';
 import { DEFAULT_SIM_AMOUNT, simulate } from './simulation';
+import { alignRates, fxSymbol } from './fx';
 import { detectDistribution } from './distribution';
 import { growthRatio, similarProducts, type FundPeriods, type SimilarItem } from './similar';
 import type { AssetClass, DividendEvent, InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
@@ -53,6 +54,8 @@ export interface Report {
   notes: string[];
   /** Distributing products only: raw closes on the dates of the euro-simulation series, plus the payments per share */
   dist?: { instrument?: DistData; benchmark?: DistData };
+  /** Non-EUR products only: currency-per-EUR rates on the dates of the euro-simulation series (dates without a usable rate are left out) */
+  fx?: { instrument?: PricePoint[]; benchmark?: PricePoint[] };
   /** Shown next to the benchmark choice when instrument and benchmark are of different known classes */
   classNote?: string;
   generatedAt: string;
@@ -132,6 +135,21 @@ async function loadDistData(symbol: string, dates: string[]): Promise<DistData |
   }
 }
 
+const fxHistoryOf = (symbol: string) =>
+  cached(`fx:${symbol}:${HISTORY_YEARS}`, TTL_PRICES, () => provider.getHistory(symbol, HISTORY_YEARS));
+
+/** Rates for a non-EUR quote currency aligned to `dates`; undefined for EUR, an unknown currency or when the rates cannot be loaded. */
+async function loadFxData(currency: string | undefined, dates: string[]): Promise<PricePoint[] | undefined> {
+  const symbol = fxSymbol(currency);
+  if (!symbol || dates.length === 0) return undefined;
+  try {
+    const rates = alignRates(await fxHistoryOf(symbol), dates);
+    return rates.length >= 2 ? rates : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** `final` is false when the data could not be loaded (retry later) and true when "no line" is by design. */
 export interface ShareEuro {
   line?: string;
@@ -196,6 +214,12 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
       ? loadDistData(benchmark.profile.symbol, chartDates)
       : undefined,
   ]);
+  const simDates = chartDates.length > 0 ? chartDates : monthly.map((p) => p.date);
+  const [instFx, benchFx] = await Promise.all([
+    loadFxData(instrument.currency, simDates),
+    'profile' in benchmark && chartDates.length > 0 ? loadFxData(benchmark.profile.currency, chartDates) : undefined,
+  ]);
+  const fx = instFx || benchFx ? { instrument: instFx, benchmark: benchFx } : undefined;
   const dist = instDist || benchDist ? { instrument: instDist, benchmark: benchDist } : undefined;
 
   return {
@@ -206,6 +230,7 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
     monthly,
     notes,
     dist,
+    fx,
     classNote,
     generatedAt: new Date().toISOString(),
   };

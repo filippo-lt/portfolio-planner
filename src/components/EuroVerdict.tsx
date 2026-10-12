@@ -9,7 +9,8 @@ import type { EffectiveFees } from '@/lib/fees';
 import { ACC_LABEL, DIST_LABEL, DIST_UNKNOWN, DIVIDENDS_UNKNOWN, type Distribution } from '@/lib/distribution';
 import type { DistData } from '@/lib/report';
 import { NA } from '@/lib/profileFit';
-import { fmtDate, fmtEur } from '@/lib/format';
+import { fmtDate, fmtEur, fmtNum, fmtPct } from '@/lib/format';
+import { DEFAULT_FX_COST, parseFxCost } from '@/lib/fx';
 import { lastYearStart, parseSimAmount, simulate, terCostEstimate, type SimResult } from '@/lib/simulation';
 import { TONE_TEXT, cx, signTone } from './ui';
 
@@ -21,6 +22,8 @@ export interface EuroSide {
   distribution?: Distribution;
   /** Raw closes and payments for a distributing product; absent means the adjusted series is used */
   dist?: DistData;
+  /** Non-EUR quote: currency per 1 EUR on the dates of `prices`; absent means no conversion is made */
+  fx?: PricePoint[];
   /** For the tax estimate */
   type?: InstrumentType;
   assetClass?: AssetClass;
@@ -77,6 +80,8 @@ function TaxLines({ sim, tax }: { sim: SimResult; tax: TaxEstimate | undefined }
   );
 }
 
+const isForeign = (side: EuroSide) => !!side.currency && side.currency !== 'EUR';
+
 function Result({ title, amount, sim, side, taxCountry }: { title: string; amount: number; sim: SimResult | undefined; side: EuroSide; taxCountry: TaxCountry | undefined }) {
   if (!sim) return <p className="mt-1 text-sm text-muted">{title}: {NA}</p>;
   const { entry, exit } = sim.feesIncluded;
@@ -97,14 +102,21 @@ function Result({ title, amount, sim, side, taxCountry }: { title: string; amoun
         <Line label="Valore lordo">{fmtEur(sim.grossValue)}</Line>
         {sim.dividendsEur !== undefined && <Line label="di cui cedole/dividendi incassati">{fmtEur(sim.dividendsEur)}</Line>}
         <Line label="Commissioni">{feeText}</Line>
+        {sim.fx && <Line label="Costo cambio valuta">{fmtEur(sim.fx.costEur)}</Line>}
         <Line label="Valore netto">{fmtEur(sim.netValue)}</Line>
       </dl>
+      {sim.fx && side.currency && (
+        <p className="mt-1 text-xs text-muted">
+          Cambio EUR/{side.currency} al {fmtDate(sim.fx.startRateDate)}: {fmtNum(sim.fx.startRate, 4)} · al {fmtDate(sim.fx.endRateDate)}: {fmtNum(sim.fx.endRate, 4)}
+        </p>
+      )}
+      {isForeign(side) && !sim.fx && <p className="mt-1 text-xs text-muted">Cambio {side.currency}: {NA}, conversione non inclusa.</p>}
       <TaxLines sim={sim} tax={tax} />
     </div>
   );
 }
 
-function Column({ title, amount, side, taxCountry }: { title: string; amount: number; side: EuroSide | undefined; taxCountry: TaxCountry | undefined }) {
+function Column({ title, amount, side, taxCountry, fxCost }: { title: string; amount: number; side: EuroSide | undefined; taxCountry: TaxCountry | undefined; fxCost: number }) {
   if (!side) {
     return (
       <div className="min-w-0">
@@ -113,7 +125,7 @@ function Column({ title, amount, side, taxCountry }: { title: string; amount: nu
       </div>
     );
   }
-  const base = { amount, prices: side.prices, entryFee: side.fees.entry?.value, exitFee: side.fees.exit?.value, rawPrices: side.dist?.raw, dividends: side.dist?.dividends };
+  const base = { amount, prices: side.prices, entryFee: side.fees.entry?.value, exitFee: side.fees.exit?.value, rawPrices: side.dist?.raw, dividends: side.dist?.dividends, fx: isForeign(side) && side.fx ? { rates: side.fx, cost: fxCost } : undefined };
   const full = simulate(base);
   const year = simulate({ ...base, from: lastYearStart(side.prices) });
   const policy = side.distribution === 'acc' ? ACC_LABEL : side.distribution === 'dist' ? DIST_LABEL : DIST_UNKNOWN;
@@ -139,6 +151,9 @@ export function EuroVerdict({
   reference,
   referenceLabel,
   taxCountry,
+  fxCost = DEFAULT_FX_COST,
+  onFxCost,
+  fxCostIsUser = false,
 }: {
   amount: number;
   onAmount: (v: number) => void;
@@ -147,12 +162,23 @@ export function EuroVerdict({
   reference: EuroSide | undefined;
   referenceLabel?: string;
   taxCountry?: TaxCountry;
+  /** Spread per currency conversion, fraction */
+  fxCost?: number;
+  onFxCost?: (v: number) => void;
+  fxCostIsUser?: boolean;
 }) {
   const id = useId();
+  const [fxDraft, setFxDraft] = useState<string | undefined>();
+  const fxText = fxDraft ?? String(Math.round(fxCost * 10000) / 100).replace('.', ',');
+  const fxInvalid = fxDraft !== undefined && parseFxCost(fxDraft) === undefined;
   const [draft, setDraft] = useState<string | undefined>();
   const text = draft ?? String(amount).replace('.', ',');
   const invalid = draft !== undefined && parseSimAmount(draft) === undefined;
-  const currencies = [...new Set([fund.currency, reference?.currency].filter((c): c is string => !!c && c !== 'EUR'))];
+  const foreign = [fund, reference].filter((x): x is EuroSide => !!x && isForeign(x));
+  const currencies = [...new Set(foreign.map((x) => x.currency!))];
+  // Conversion is missing for the products that have no rates (shown with the old note).
+  const unconverted = [...new Set(foreign.filter((x) => !x.fx).map((x) => x.currency!))];
+  const converted = foreign.some((x) => x.fx);
   return (
     <section aria-labelledby={`${id}-t`} className="card mt-3 rounded-2xl border border-line bg-surface p-3.5">
       <h2 id={`${id}-t`} className="text-sm font-semibold">
@@ -180,6 +206,34 @@ export function EuroVerdict({
           className="h-11 w-32 rounded-xl border border-line-strong/60 bg-surface px-3 text-base tabular-nums focus:border-accent"
         />
       </div>
+      {currencies.length > 0 && onFxCost && (
+        <div className="mt-2">
+          <div className="flex items-center gap-2">
+            <label htmlFor={`${id}-fx`} className="text-xs text-muted">
+              Costo cambio %
+            </label>
+            <input
+              id={`${id}-fx`}
+              value={fxText}
+              inputMode="decimal"
+              autoComplete="off"
+              maxLength={5}
+              aria-invalid={fxInvalid}
+              aria-describedby={`${id}-fxn`}
+              onChange={(e) => {
+                setFxDraft(e.target.value);
+                const v = parseFxCost(e.target.value);
+                if (v !== undefined) onFxCost(v);
+              }}
+              onBlur={() => setFxDraft(undefined)}
+              className="h-11 w-24 rounded-xl border border-line-strong/60 bg-surface px-3 text-base tabular-nums focus:border-accent"
+            />
+          </div>
+          <p id={`${id}-fxn`} className={cx('mt-1 text-xs', fxInvalid ? 'text-error' : 'text-muted')} role={fxInvalid ? 'alert' : undefined}>
+            {fxInvalid ? 'Inserisci un valore tra 0 e 5.' : `Applicato a ogni conversione, all'andata e al ritorno (${fmtPct(fxCost, 2)}): ${fxCostIsUser ? 'inserito da te' : 'valore predefinito (stima tipica broker)'}.`}
+          </p>
+        </div>
+      )}
       {invalid && (
         <p id={`${id}-err`} role="alert" className="mt-1 text-xs text-error">
           Inserisci un importo tra 1 e 10.000.000 €.
@@ -194,13 +248,20 @@ export function EuroVerdict({
         </p>
       )}
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Column title="Questo strumento" amount={amount} side={fund} taxCountry={taxCountry} />
-        <Column title={referenceLabel ? `Riferimento · ${referenceLabel}` : 'Riferimento'} amount={amount} side={reference} taxCountry={taxCountry} />
+        <Column title="Questo strumento" amount={amount} side={fund} taxCountry={taxCountry} fxCost={fxCost} />
+        <Column title={referenceLabel ? `Riferimento · ${referenceLabel}` : 'Riferimento'} amount={amount} side={reference} taxCountry={taxCountry} fxCost={fxCost} />
       </div>
-      {currencies.length > 0 && (
-        <p className="mt-3 text-xs text-muted">Valori nella valuta di quotazione ({currencies.join(', ')}): conversione non inclusa</p>
+      {unconverted.length > 0 && (
+        <p className="mt-3 text-xs text-muted">Cambio {unconverted.map((c) => `EUR/${c}`).join(', ')}: {NA}. Valori nella valuta di quotazione ({unconverted.join(', ')}): conversione non inclusa</p>
       )}
-      <p className="mt-2 text-xs text-muted">Commissioni: solo quelle di ingresso e uscita disponibili. Cambio non incluso; le tasse sono una stima, solo se hai indicato la residenza fiscale.</p>
+      {converted && (
+        <p className="mt-3 text-xs text-muted">
+          Conversione EUR → valuta di quotazione → EUR con il cambio più recente disponibile entro 7 giorni dalla data; cedole e dividendi sono convertiti al cambio finale (semplificazione).
+        </p>
+      )}
+      <p className="mt-2 text-xs text-muted">
+        Commissioni: solo quelle di ingresso e uscita disponibili. {currencies.length > 0 && !converted ? 'Cambio non incluso; ' : ''}Le tasse sono una stima, solo se hai indicato la residenza fiscale.
+      </p>
     </section>
   );
 }

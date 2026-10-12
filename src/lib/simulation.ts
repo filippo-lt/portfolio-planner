@@ -1,6 +1,7 @@
 /** Isomorphic and pure: "what do I take home?" simulation in euros. Prices are adjusted closes, already net of TER. */
 import type { DividendEvent, PricePoint } from './data/types';
 import { parseItDecimal } from './profileValidation';
+import { rateOnOrBefore } from './fx';
 
 export const DEFAULT_SIM_AMOUNT = 1000;
 export const MAX_SIM_AMOUNT = 10_000_000;
@@ -30,6 +31,22 @@ export interface SimInput {
    */
   rawPrices?: PricePoint[];
   dividends?: DividendEvent[];
+  /**
+   * Non-EUR product: `rates` are units of the quote currency per 1 EUR (dated, ascending), `cost` the spread per conversion (fraction).
+   * Without a rate near the start or end date the result stays unconverted (`fx` undefined in the result).
+   */
+  fx?: { rates: PricePoint[]; cost: number };
+}
+
+/** Conversion applied to a result: EUR -> currency at the start, currency -> EUR at the end. */
+export interface FxApplied {
+  startRate: number;
+  startRateDate: string;
+  endRate: number;
+  endRateDate: string;
+  cost: number;
+  /** EUR value without the spread minus EUR value with it */
+  costEur: number;
 }
 
 export interface SimResult {
@@ -48,6 +65,8 @@ export interface SimResult {
   /** Cash received as coupons/dividends, not reinvested. Set only when simulated on raw prices (distributing). */
   dividendsEur?: number;
   distribution?: 'acc' | 'dist';
+  /** Set when the amounts above are converted through the quote currency */
+  fx?: FxApplied;
 }
 
 function nearest(prices: PricePoint[], date: string): PricePoint {
@@ -84,7 +103,7 @@ export function applyGrowth(amount: number, ratio: number, entryFee?: number, ex
  * The TER is NOT subtracted: adjusted prices already include it.
  * Undefined when the history does not reach back to `from` (within a week) or covers less than two points.
  */
-export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrices, dividends }: SimInput): SimResult | undefined {
+export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrices, dividends, fx }: SimInput): SimResult | undefined {
   if (!Number.isFinite(amount) || amount <= 0 || prices.length < 2) return undefined;
   if (from && toMs(prices[0].date) > toMs(from) + 7 * DAY) return undefined;
   const s = from ? nearest(prices, from) : prices[0];
@@ -101,21 +120,33 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrice
   const dividendsEur = dist
     ? dist.shares * (dividends ?? []).filter((d) => d.date > s.date && d.date <= e.date).reduce((t, d) => t + d.amount, 0)
     : undefined;
-  const exitFeeEur = grossValue * (feeOrUndefined(exitFee) ?? 0);
-  const netValue = grossValue - exitFeeEur + (dividendsEur ?? 0);
+  const exitFee0 = grossValue * (feeOrUndefined(exitFee) ?? 0);
+  const net0 = grossValue - exitFee0 + (dividendsEur ?? 0);
+  // Currency conversion: growth is a ratio, so the EUR result is the EUR-like one times rate(start)/rate(end), less the spread twice.
+  // Dividends are received in the quote currency and converted at the end rate (simplification).
+  const rs0 = fx ? rateOnOrBefore(fx.rates, s.date) : undefined;
+  const re0 = fx ? rateOnOrBefore(fx.rates, e.date) : undefined;
+  const spread = fx && Number.isFinite(fx.cost) && fx.cost >= 0 && fx.cost < 1 ? fx.cost : 0;
+  const m0 = rs0 && re0 ? rs0.close / re0.close : 1;
+  const m = m0 * (1 - spread) ** 2;
+  const converted = rs0 && re0 ? { startRate: rs0.close, startRateDate: rs0.date, endRate: re0.close, endRateDate: re0.date, cost: spread, costEur: net0 * (m0 - m) } : undefined;
+  const k = converted ? m : 1;
+  const exitFeeEur = exitFee0 * k;
+  const netValue = net0 * k;
   return {
     start: s.close,
     end: e.close,
     startDate: s.date,
     endDate: e.date,
     years: (toMs(e.date) - toMs(s.date)) / (365.25 * DAY),
-    grossValue,
+    grossValue: grossValue * k,
     entryFeeEur,
     exitFeeEur,
     netValue,
     gainEur: netValue - amount,
     feesIncluded,
-    ...(dist ? { dividendsEur, distribution: 'dist' as const } : {}),
+    ...(dist ? { dividendsEur: dividendsEur! * k, distribution: 'dist' as const } : {}),
+    ...(converted ? { fx: converted } : {}),
   };
 }
 
