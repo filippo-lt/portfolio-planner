@@ -20,7 +20,10 @@ cp .env.example .env.local   # ANTHROPIC_API_KEY (optional), ANTHROPIC_MODEL, OP
 npm run dev      # http://localhost:3000
 npm test         # vitest
 npm run build
+npm run check    # lint + format + types + tests (run before pushing)
 ```
+
+Coding standards and tooling: [`docs/coding-standards.md`](docs/coding-standards.md).
 
 Without `ANTHROPIC_API_KEY` the "Riepilogo (AI)" section is simply hidden.
 
