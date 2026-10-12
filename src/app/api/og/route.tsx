@@ -13,9 +13,9 @@ export async function GET(req: Request) {
     title: profile?.name ?? symbol,
     subtitle: 'Rendimenti, volatilità e drawdown a confronto con il benchmark.',
     chips,
-    euroLine: euro,
+    euroLine: euro.line,
   });
-  // Cache only complete cards; a fallback (provider slow or down) should be retried by the next crawler.
-  image.headers.set('Cache-Control', profile && euro ? 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800' : 'no-store');
+  // Cache only complete cards (a card with no euro line by design is complete); a fallback (provider slow or down) should be retried by the next crawler.
+  image.headers.set('Cache-Control', profile && euro.final ? 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800' : 'no-store');
   return image;
 }

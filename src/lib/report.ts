@@ -132,21 +132,29 @@ async function loadDistData(symbol: string, dates: string[]): Promise<DistData |
   }
 }
 
+/** `final` is false when the data could not be loaded (retry later) and true when "no line" is by design. */
+export interface ShareEuro {
+  line?: string;
+  final: boolean;
+}
+
+const monthYear = (iso: string) => `${fmtMonthYear(iso).split(' ')[0]} ${iso.slice(0, 4)}`;
+
 /**
  * Full-history euro line for the share image: default amount, fund only, fees as known (never estimated).
- * Undefined without a history or for a non-euro quote (no conversion is made).
+ * No line (final) for a non-euro quote (no conversion is made) or a history too short to simulate.
  */
-export async function buildShareEuro(symbol: string): Promise<string | undefined> {
+export async function buildShareEuro(symbol: string): Promise<ShareEuro> {
   try {
     const [instrument, prices] = await Promise.all([profileOf(symbol), historyOf(symbol)]);
-    if (instrument.currency !== 'EUR' || prices.length < 2) return undefined;
+    if (instrument.currency !== 'EUR' || prices.length < 2) return { final: true };
     const dist = instrument.distribution === 'dist' ? await loadDistData(symbol, prices.map((p) => p.date)) : undefined;
     const fees = effectiveFees(instrument);
     const sim = simulate({ amount: DEFAULT_SIM_AMOUNT, prices, entryFee: fees.entry?.value, exitFee: fees.exit?.value, rawPrices: dist?.raw, dividends: dist?.dividends });
-    if (!sim) return undefined;
-    return `${fmtEur(DEFAULT_SIM_AMOUNT)} → ${fmtEur(sim.netValue)} (${fmtMonthYear(sim.startDate)} – ${fmtMonthYear(sim.endDate)}, dati storici)`;
+    if (!sim) return { final: true };
+    return { line: `${fmtEur(DEFAULT_SIM_AMOUNT)} → ${fmtEur(sim.netValue)} (${monthYear(sim.startDate)} – ${monthYear(sim.endDate)}, dati storici)`, final: true };
   } catch {
-    return undefined;
+    return { final: false };
   }
 }
 

@@ -415,7 +415,6 @@ export function ReportView({ symbol }: { symbol: string }) {
             referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
           />
 
-
           <div className="mt-5">
             <SegmentedControl
               label="Livello di dettaglio"
@@ -453,7 +452,6 @@ export function ReportView({ symbol }: { symbol: string }) {
             }
             benchExtra={benchOk ? <FeeRows fees={effectiveFees(benchOk.profile)} /> : undefined}
           />
-
 
           <Section id="h-bench" title="Confronto con un riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
             <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
@@ -635,7 +633,6 @@ export function ReportView({ symbol }: { symbol: string }) {
             {figures}
           </dl>
 
-
           <SimilarProducts
             symbol={symbol}
             assetClass={insClass}
@@ -644,13 +641,14 @@ export function ReportView({ symbol }: { symbol: string }) {
             amount={simAmount}
           />
 
-
           <AiSummary report={report} fit={fit} level={level} />
 
           {benchOk && !sameAsBench && rank >= 1 && (
-            <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
-              <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />
-            </div>
+            <Section id="h-cmp" title="Confronto con il riferimento">
+              <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
+                <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />
+              </div>
+            </Section>
           )}
 
           {rank >= 1 && (!benchOk || sameAsBench || rank >= 2) && (
@@ -679,7 +677,6 @@ export function ReportView({ symbol }: { symbol: string }) {
               />
             </Section>
           )}
-
 
           {(ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1 && (
             <Section id="h-comp" title="Composizione">
