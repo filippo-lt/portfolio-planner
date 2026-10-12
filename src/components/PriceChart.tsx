@@ -2,7 +2,9 @@
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { RebasedPoint } from '@/lib/metrics';
-import { fmtDate, fmtNum } from '@/lib/format';
+import { fmtDate, fmtMonthYear, fmtNum } from '@/lib/format';
+import { chartGap } from '@/lib/metrics';
+import { chartTicks } from '@/lib/chartTicks';
 
 function downsample(data: RebasedPoint[], max = 400): RebasedPoint[] {
   if (data.length <= max) return data;
@@ -15,6 +17,9 @@ function downsample(data: RebasedPoint[], max = 400): RebasedPoint[] {
 export function PriceChart({ data, nameA, nameB }: { data: RebasedPoint[]; nameA: string; nameB: string }) {
   const first = data[0];
   const last = data[data.length - 1];
+  const plotted = downsample(data);
+  const { ticks, unit } = chartTicks(plotted.map((p) => p.date));
+  const gap = chartGap(data, nameA, nameB);
   const label = `Grafico a linee, base 100 al ${fmtDate(first.date)}. Al ${fmtDate(last.date)}: ${nameA} ${fmtNum(last.a)}, ${nameB} ${fmtNum(last.b)}.`;
   return (
     <figure className="card mt-4 rounded-2xl border border-line bg-surface p-4">
@@ -34,12 +39,13 @@ export function PriceChart({ data, nameA, nameB }: { data: RebasedPoint[]; nameA
       </div>
       <div role="img" aria-label={label} className="-mx-1 mt-3 h-56 sm:h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={downsample(data)} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+          <LineChart data={plotted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="var(--grid)" vertical={false} />
             <XAxis
               dataKey="date"
-              tickFormatter={(d: string) => d.slice(0, 4)}
-              minTickGap={32}
+              ticks={ticks}
+              tickFormatter={(d: string) => (unit === 'year' ? d.slice(0, 4) : fmtMonthYear(d))}
+              interval={0}
               stroke="var(--muted)"
               tickLine={false}
               axisLine={false}
@@ -71,6 +77,7 @@ export function PriceChart({ data, nameA, nameB }: { data: RebasedPoint[]; nameA
           </LineChart>
         </ResponsiveContainer>
       </div>
+      {gap && <p className="mt-2 text-sm">{gap}</p>}
       <figcaption className="mt-2 text-xs text-muted">
         Valore di 100 investiti il {fmtDate(first.date)} (prima data in comune), nelle rispettive valute di quotazione.
       </figcaption>

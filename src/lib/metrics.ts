@@ -1,3 +1,4 @@
+import { fmtPctSigned } from './format';
 import type { PricePoint } from './data/types';
 
 const DAY = 24 * 3600 * 1000;
@@ -144,4 +145,25 @@ export function rollingReturnRange(series: PricePoint[], horizonYears: number): 
   }
   if (count === 0) return undefined;
   return { windowYears: horizonYears, worst, best, count };
+}
+
+/**
+ * One neutral sentence on where the two rebased lines end up. Null when there is no common period.
+ * Numbers are the chart end values minus the base of 100.
+ */
+export function chartGap(data: RebasedPoint[], nameA: string, nameB: string): string | null {
+  if (data.length < 2) return null;
+  const first = data[0];
+  const last = data[data.length - 1];
+  const years = (toMs(last.date) - toMs(first.date)) / (365.25 * DAY);
+  let span: string;
+  if (years >= 1) {
+    const y = Math.round(years);
+    span = `${y} ${y === 1 ? 'anno' : 'anni'}`;
+  } else {
+    const m = Math.max(1, Math.round(years * 12));
+    span = `${m} ${m === 1 ? 'mese' : 'mesi'}`;
+  }
+  const pct = (v: number) => fmtPctSigned((v - 100) / 100);
+  return `In ${span} ${nameA} è ${pct(last.a)} e ${nameB} è ${pct(last.b)}.`;
 }

@@ -33,3 +33,17 @@ export function fmtDate(iso: string | undefined): string {
 export function fmtYears(y: number): string {
   return nf(1).format(y);
 }
+
+const MONTHS_IT = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+/** "2023-01-15" -> "gen 23" */
+export function fmtMonthYear(iso: string): string {
+  const [y, m] = iso.split('-');
+  return `${MONTHS_IT[Number(m) - 1]} ${y.slice(2)}`;
+}
+
+/** Percentage with explicit sign: 0.123 -> "+12,3%", -0.05 -> "-5,0%". */
+export function fmtPctSigned(v: number, digits = 1): string {
+  const s = fmtPct(v, digits);
+  return v > 0 && s !== NA ? `+${s}` : s;
+}
