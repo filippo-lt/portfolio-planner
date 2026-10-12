@@ -1,8 +1,8 @@
 import { cached, TTL_PRICES, TTL_PROFILE } from './cache';
-import { defaultBenchmarkFor } from './benchmarks';
+import { defaultBenchmarkFor, findBenchmark } from './benchmarks';
 import { yahooProvider } from './data/yahoo';
 import type { DataProvider } from './data/provider';
-import type { InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
+import type { AssetClass, InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
 import {
   annualizedReturn,
   annualizedVolatilityDetail,
@@ -39,7 +39,28 @@ export interface Report {
   /** Monthly closes of the instrument, for client-side rolling-window comparison */
   monthly: PricePoint[];
   notes: string[];
+  /** Shown next to the benchmark choice when instrument and benchmark are of different known classes */
+  classNote?: string;
   generatedAt: string;
+}
+
+const CLASS_LABEL: Record<AssetClass, string> = {
+  equity: 'azionario',
+  bond: 'obbligazionario',
+  mixed: 'bilanciato',
+  other: 'altro',
+  unknown: '',
+};
+
+/** Neutral note when both classes are known and differ; undefined otherwise. a = instrument, b = benchmark. */
+export function classMismatch(a: AssetClass | undefined, b: AssetClass | undefined): string | undefined {
+  if (!a || !b || a === 'unknown' || b === 'unknown' || a === b) return undefined;
+  return `Strumento di tipo diverso (${CLASS_LABEL[b]} vs ${CLASS_LABEL[a]}): il confronto potrebbe non essere omogeneo.`;
+}
+
+/** The benchmark's own class; the curated class fills in when the profile could not tell. */
+function benchmarkClass(p: InstrumentProfile): AssetClass | undefined {
+  return p.assetClass && p.assetClass !== 'unknown' ? p.assetClass : findBenchmark(p.symbol)?.assetClass;
 }
 
 const provider: DataProvider = yahooProvider;
@@ -76,6 +97,7 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
 
   let benchmark: Report['benchmark'];
   let chart: RebasedPoint[] = [];
+  let classNote: string | undefined;
   if (!benchmarkSymbol) {
     benchmark = { symbol: '', error: CHOOSE_BENCHMARK };
   } else {
@@ -88,6 +110,8 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
           `I prezzi sono nelle rispettive valute di quotazione (${instrument.currency} e ${bProfile.currency}); il confronto non include l'effetto cambio.`,
         );
       }
+      const mismatch = classMismatch(instrument.assetClass, benchmarkClass(bProfile));
+      classNote = mismatch;
       if (chart.length === 0) notes.push('Nessuna data in comune tra strumento e benchmark: grafico Dato non disponibile.');
     } catch {
       benchmark = { symbol: benchmarkSymbol, error: 'Benchmark non trovato o dati non disponibili' };
@@ -101,6 +125,7 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
     chart,
     monthly: monthlyCloses(prices),
     notes,
+    classNote,
     generatedAt: new Date().toISOString(),
   };
 }

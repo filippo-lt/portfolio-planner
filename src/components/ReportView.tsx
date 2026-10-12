@@ -594,6 +594,12 @@ export function ReportView({ symbol }: { symbol: string }) {
               </Callout>
             )}
 
+            {report.classNote && (
+              <Callout tone="accent" className="mt-3">
+                {report.classNote}
+              </Callout>
+            )}
+
             <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
               {!benchOk ? (
                 needsChoice ? (
@@ -694,6 +700,9 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
     ['Volatilità annua', am.volatility, bm.volatility, false, false],
     ['Perdita massima storica', am.maxDrawdown?.value, bm.maxDrawdown?.value, true, true],
   ];
+  const isinCell = (p: InstrumentProfile) => (
+    <td className="py-2.5 pr-3 text-right text-[11px] text-muted">{p.isin ?? 'Dato non disponibile'}</td>
+  );
   return (
     <table className="card mt-4 w-full table-fixed overflow-hidden rounded-2xl border border-line bg-surface text-left">
       <caption className="sr-only">
@@ -724,6 +733,13 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
         </tr>
       </thead>
       <tbody className="divide-y divide-line">
+        <tr>
+          <th scope="row" className="px-4 py-2.5 text-sm font-normal text-muted">
+            ISIN
+          </th>
+          {isinCell(a)}
+          {isinCell(b)}
+        </tr>
         {rows.map(([k, x, y, higherBetter, signed]) => {
           const both = x !== undefined && y !== undefined && x !== y;
           const aWins = both && (higherBetter ? x > y : x < y);

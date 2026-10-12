@@ -42,3 +42,19 @@ describe('buildReport benchmark choice', () => {
     expect(r.chart).toEqual([]);
   });
 });
+
+describe('classMismatch', () => {
+  it('names both classes in Italian when known and different', async () => {
+    const { classMismatch } = await import('../report');
+    const msg = classMismatch('equity', 'bond');
+    expect(msg).toBe('Strumento di tipo diverso (obbligazionario vs azionario): il confronto potrebbe non essere omogeneo.');
+    expect(msg).not.toMatch(FORBIDDEN);
+  });
+  it('stays silent when equal or when either is unknown/missing', async () => {
+    const { classMismatch } = await import('../report');
+    expect(classMismatch('equity', 'equity')).toBeUndefined();
+    expect(classMismatch('equity', 'unknown')).toBeUndefined();
+    expect(classMismatch(undefined, 'bond')).toBeUndefined();
+    expect(classMismatch('other', undefined)).toBeUndefined();
+  });
+});

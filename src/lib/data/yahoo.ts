@@ -1,6 +1,7 @@
 import YahooFinance from 'yahoo-finance2';
 import type { DataProvider } from './provider';
 import { classifyAssetClass } from '../assetClass';
+import { findBenchmark } from '../benchmarks';
 import { ISIN_RE } from '../isin';
 import type {
   Allocation,
@@ -190,6 +191,10 @@ export class YahooProvider implements DataProvider {
       currency: price.currency ?? s?.summaryDetail?.currency ?? '',
       exchange: price.exchangeName ?? price.exchange ?? '',
     };
+
+    // Yahoo has no ISIN; OpenFIGI ticker lookups return FIGI data but no ISIN, so only the curated list can fill it.
+    const isin = (findBenchmark(symbol) ?? findBenchmark(profile.symbol))?.isin;
+    if (isin) profile.isin = isin;
 
     if (type !== 'STOCK') {
       const ter =
