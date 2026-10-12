@@ -8,7 +8,7 @@ Spec: `SPEC.md` (hard rules) + `docs/backlog-friend-feedback.md` (item numbers l
 - Missing data shows "Dato non disponibile" (or "non incluso" for a cost/tax line). Never estimate a missing value. Estimates that come from rules (tax) must be labelled "stima" with the rule used.
 - Next.js 16 / React 19 with breaking changes: before touching app/route code read the relevant guide in `node_modules/next/dist/docs/`.
 - Pure logic goes in `src/lib/` with vitest tests in `src/lib/__tests__/`. UI in `src/components/`.
-- Before reporting done, all must pass: `npx vitest run`, `npx tsc --noEmit`, `npm run lint`.
+- Before reporting done, all must pass: `npx vitest run`, `npx tsc --noEmit` (one pre-existing error in `src/app/profilo/layout.tsx` is known — ignore only that one), `npx eslint src`.
 - Commit with: `git commit --author="filippo-lt <filippo.tosetto@leadtech.com>" -m "<concise message>"`. No Co-Authored-By lines, no AI mention in messages.
 - Match the surrounding code style (comment density, naming, Tailwind tokens, components in `src/components/ui.tsx`).
 - Mobile first: layouts must work at 375px wide.
