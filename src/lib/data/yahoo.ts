@@ -5,6 +5,7 @@ import { findBenchmark } from '../benchmarks';
 import { ISIN_RE } from '../isin';
 import type {
   Allocation,
+  DividendEvent,
   Fundamentals,
   Holding,
   InstrumentProfile,
@@ -272,13 +273,37 @@ export class YahooProvider implements DataProvider {
   }
 
   async getHistory(symbol: string, years: number): Promise<PricePoint[]> {
+    return this.closes(symbol, years, true);
+  }
+
+  async getRawHistory(symbol: string, years: number): Promise<PricePoint[]> {
+    return this.closes(symbol, years, false);
+  }
+
+  async getDividends(symbol: string, years: number): Promise<DividendEvent[]> {
+    const res = await this.chart(symbol, years, 'div');
+    const offsetMs = (num(res?.meta?.gmtoffset) ?? 0) * 1000;
+    const out: DividendEvent[] = [];
+    for (const d of res?.events?.dividends ?? []) {
+      const amount = num(d.amount);
+      if (amount === undefined || amount <= 0 || !d.date) continue;
+      out.push({ date: new Date(new Date(d.date).getTime() + offsetMs).toISOString().slice(0, 10), amount });
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  private chart(symbol: string, years: number, events?: string): Promise<any> {
     const period1 = new Date(Date.now() - years * 365.25 * 24 * 3600 * 1000);
-    const res: any = await withTimeout(yf.chart(symbol, { period1, interval: '1d' }, LOOSE));
+    return withTimeout(yf.chart(symbol, { period1, interval: '1d', ...(events ? { events } : {}) }, LOOSE));
+  }
+
+  private async closes(symbol: string, years: number, adjusted: boolean): Promise<PricePoint[]> {
+    const res: any = await this.chart(symbol, years);
     // Express each timestamp in the exchange's local calendar day (gmtoffset is in seconds).
     const offsetMs = (num(res?.meta?.gmtoffset) ?? 0) * 1000;
     const out: PricePoint[] = [];
     for (const q of res?.quotes ?? []) {
-      const close = num(q.adjclose) ?? num(q.close);
+      const close = adjusted ? (num(q.adjclose) ?? num(q.close)) : num(q.close);
       if (close === undefined || close <= 0 || !q.date) continue;
       out.push({ date: new Date(new Date(q.date).getTime() + offsetMs).toISOString().slice(0, 10), close });
     }

@@ -618,10 +618,12 @@ export function ReportView({ symbol }: { symbol: string }) {
                 fees: effectiveFees(ins, userFees),
                 ter: isStock ? undefined : ins.ter,
                 currency: ins.currency,
+                distribution: ins.distribution,
+                dist: report.dist?.instrument,
               }}
               reference={
                 benchOk && !sameAsBench && report.chart.length > 0
-                  ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency }
+                  ? { prices: chartSeries(report.chart, 'b'), fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark }
                   : undefined
               }
               referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}

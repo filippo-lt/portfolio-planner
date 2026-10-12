@@ -3,7 +3,8 @@ import { defaultBenchmarkFor, findBenchmark } from './benchmarks';
 import { applyCostOverrides } from './data/costOverrides';
 import { yahooProvider } from './data/yahoo';
 import type { DataProvider } from './data/provider';
-import type { AssetClass, InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
+import { detectDistribution } from './distribution';
+import type { AssetClass, DividendEvent, InstrumentProfile, PricePoint, SymbolCandidate } from './data/types';
 import {
   annualizedReturn,
   annualizedVolatilityDetail,
@@ -31,6 +32,11 @@ export interface Metrics {
   historyEnd?: string;
 }
 
+export interface DistData {
+  raw: PricePoint[];
+  dividends: DividendEvent[];
+}
+
 export interface Report {
   instrument: InstrumentProfile;
   benchmark: { profile: InstrumentProfile; metrics: Metrics } | { symbol: string; error: string };
@@ -40,6 +46,8 @@ export interface Report {
   /** Monthly closes of the instrument, for client-side rolling-window comparison */
   monthly: PricePoint[];
   notes: string[];
+  /** Distributing products only: raw closes on the dates of the euro-simulation series, plus the payments per share */
+  dist?: { instrument?: DistData; benchmark?: DistData };
   /** Shown next to the benchmark choice when instrument and benchmark are of different known classes */
   classNote?: string;
   generatedAt: string;
@@ -84,10 +92,40 @@ export function searchInstruments(q: string): Promise<SymbolCandidate[]> {
   return cached(`search:${q.trim().toUpperCase()}`, TTL_PROFILE, () => provider.resolve(q));
 }
 
-const profileOf = (s: string) => cached(`profile:${s}`, TTL_PROFILE, async () => applyCostOverrides(await provider.getProfile(s)));
+const profileOf = (s: string) =>
+  cached(`profile:v2:${s}`, TTL_PROFILE, async () => {
+    const p = applyCostOverrides(await provider.getProfile(s));
+    const distribution = detectDistribution(p.symbol, p.name, p.type);
+    return distribution ? { ...p, distribution } : p;
+  });
 export const getInstrumentProfile = (s: string) => profileOf(s);
 const historyOf = (s: string) =>
   cached(`history:${s}:${HISTORY_YEARS}`, TTL_PRICES, () => provider.getHistory(s, HISTORY_YEARS));
+
+const rawHistoryOf = (s: string) =>
+  cached(`rawhistory:${s}:${HISTORY_YEARS}`, TTL_PRICES, () => provider.getRawHistory(s, HISTORY_YEARS));
+const dividendsOf = (s: string) =>
+  cached(`dividends:${s}:${HISTORY_YEARS}`, TTL_PRICES, () => provider.getDividends(s, HISTORY_YEARS));
+
+/**
+ * Raw closes on exactly the dates of `dates` plus the dividend events, for a distributing product.
+ * Undefined when either is missing: the client then falls back to the adjusted series and says so, never estimates.
+ */
+async function loadDistData(symbol: string, dates: string[]): Promise<DistData | undefined> {
+  try {
+    const [rawAll, dividends] = await Promise.all([rawHistoryOf(symbol), dividendsOf(symbol)]);
+    if (dividends.length === 0) return undefined;
+    const byDate = new Map(rawAll.map((p) => [p.date, p.close]));
+    const raw: PricePoint[] = [];
+    for (const date of dates) {
+      const close = byDate.get(date);
+      if (close !== undefined) raw.push({ date, close });
+    }
+    return raw.length >= 2 ? { raw, dividends } : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function buildReport(symbol: string, requestedBenchmark?: string): Promise<Report> {
   const [instrument, prices] = await Promise.all([profileOf(symbol), historyOf(symbol)]);
@@ -119,13 +157,24 @@ export async function buildReport(symbol: string, requestedBenchmark?: string): 
     }
   }
 
+  const monthly = monthlyCloses(prices);
+  const chartDates = chart.map((p) => p.date);
+  const [instDist, benchDist] = await Promise.all([
+    instrument.distribution === 'dist' ? loadDistData(symbol, chartDates.length > 0 ? chartDates : monthly.map((p) => p.date)) : undefined,
+    'profile' in benchmark && benchmark.profile.distribution === 'dist' && chartDates.length > 0
+      ? loadDistData(benchmark.profile.symbol, chartDates)
+      : undefined,
+  ]);
+  const dist = instDist || benchDist ? { instrument: instDist, benchmark: benchDist } : undefined;
+
   return {
     instrument,
     benchmark,
     metrics: computeMetrics(prices),
     chart,
-    monthly: monthlyCloses(prices),
+    monthly,
     notes,
+    dist,
     classNote,
     generatedAt: new Date().toISOString(),
   };

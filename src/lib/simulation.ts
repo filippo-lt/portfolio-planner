@@ -1,5 +1,5 @@
 /** Isomorphic and pure: "what do I take home?" simulation in euros. Prices are adjusted closes, already net of TER. */
-import type { PricePoint } from './data/types';
+import type { DividendEvent, PricePoint } from './data/types';
 import { parseItDecimal } from './profileValidation';
 
 export const DEFAULT_SIM_AMOUNT = 1000;
@@ -24,6 +24,12 @@ export interface SimInput {
   /** Fractions (0.01 = 1%); missing means "not included", never estimated. */
   entryFee?: number;
   exitFee?: number;
+  /**
+   * Distributing products only: non-adjusted closes (same dates as `prices`) and the per-share payments.
+   * Both are needed; without them the adjusted path (payments reinvested) is used.
+   */
+  rawPrices?: PricePoint[];
+  dividends?: DividendEvent[];
 }
 
 export interface SimResult {
@@ -39,6 +45,9 @@ export interface SimResult {
   netValue: number;
   gainEur: number;
   feesIncluded: { entry: boolean; exit: boolean };
+  /** Cash received as coupons/dividends, not reinvested. Set only when simulated on raw prices (distributing). */
+  dividendsEur?: number;
+  distribution?: 'acc' | 'dist';
 }
 
 function nearest(prices: PricePoint[], date: string): PricePoint {
@@ -59,7 +68,7 @@ export function lastYearStart(prices: PricePoint[]): string | undefined {
  * The TER is NOT subtracted: adjusted prices already include it.
  * Undefined when the history does not reach back to `from` (within a week) or covers less than two points.
  */
-export function simulate({ amount, prices, from, to, entryFee, exitFee }: SimInput): SimResult | undefined {
+export function simulate({ amount, prices, from, to, entryFee, exitFee, rawPrices, dividends }: SimInput): SimResult | undefined {
   if (!Number.isFinite(amount) || amount <= 0 || prices.length < 2) return undefined;
   if (from && toMs(prices[0].date) > toMs(from) + 7 * DAY) return undefined;
   const s = from ? nearest(prices, from) : prices[0];
@@ -68,9 +77,17 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee }: SimInp
   const entry = entryFee !== undefined && Number.isFinite(entryFee) && entryFee >= 0 ? entryFee : undefined;
   const exit = exitFee !== undefined && Number.isFinite(exitFee) && exitFee >= 0 ? exitFee : undefined;
   const entryFeeEur = amount * (entry ?? 0);
-  const grossValue = ((amount - entryFeeEur) * e.close) / s.close;
+  const invested = amount - entryFeeEur;
+  // Distributing: price change on the raw closes, plus the payments received in cash (ex-date after start, up to end).
+  const rs = rawPrices && dividends ? rawPrices.find((p) => p.date === s.date) : undefined;
+  const re = rawPrices && dividends ? rawPrices.find((p) => p.date === e.date) : undefined;
+  const dist = rs && re && rs.close > 0 && re.close > 0 ? { shares: invested / rs.close, end: re.close } : undefined;
+  const grossValue = dist ? dist.shares * dist.end : (invested * e.close) / s.close;
+  const dividendsEur = dist
+    ? dist.shares * (dividends ?? []).filter((d) => d.date > s.date && d.date <= e.date).reduce((t, d) => t + d.amount, 0)
+    : undefined;
   const exitFeeEur = grossValue * (exit ?? 0);
-  const netValue = grossValue - exitFeeEur;
+  const netValue = grossValue - exitFeeEur + (dividendsEur ?? 0);
   return {
     start: s.close,
     end: e.close,
@@ -83,6 +100,7 @@ export function simulate({ amount, prices, from, to, entryFee, exitFee }: SimInp
     netValue,
     gainEur: netValue - amount,
     feesIncluded: { entry: entry !== undefined, exit: exit !== undefined },
+    ...(dist ? { dividendsEur, distribution: 'dist' as const } : {}),
   };
 }
 

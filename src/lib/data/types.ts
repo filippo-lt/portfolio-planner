@@ -54,6 +54,8 @@ export interface InstrumentProfile {
   assetClass?: AssetClass;
   /** Short Italian reason for the asset class, e.g. "Categoria Yahoo: EUR Diversified Bond" */
   assetClassReason?: string;
+  /** Accumulating or distributing share class; undefined when neither the curated list nor the name says */
+  distribution?: 'acc' | 'dist';
 }
 
 export interface PricePoint {
@@ -61,6 +63,13 @@ export interface PricePoint {
   date: string;
   /** Adjusted close */
   close: number;
+}
+
+/** A cash payment per share (coupon or dividend), in the product's currency. */
+export interface DividendEvent {
+  /** ISO date YYYY-MM-DD of the ex-date */
+  date: string;
+  amount: number;
 }
 
 export interface SymbolCandidate {
