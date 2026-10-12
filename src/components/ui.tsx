@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { useRef, type ComponentProps, type ReactNode } from 'react';
+import type { Tone } from '@/lib/tone';
+
+export type { Tone };
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -10,8 +13,8 @@ type ButtonProps = ComponentProps<'button'> & { variant?: 'primary' | 'secondary
 const BTN_BASE =
   'pressable inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold disabled:opacity-60 disabled:active:scale-100';
 const BTN_VARIANT = {
-  primary: 'bg-accent text-accent-fg shadow-[0_1px_2px_rgb(0_0_0/0.12),inset_0_1px_0_rgb(255_255_255/0.12)] hover:bg-accent-hover',
-  secondary: 'border border-line bg-surface text-ink hover:border-line-strong',
+  primary: 'btn-primary bg-accent text-accent-fg',
+  secondary: 'border border-accent/30 bg-surface text-accent hover:border-accent/60 hover:bg-accent-soft',
   ghost: 'text-accent hover:bg-accent-soft',
 };
 
@@ -50,9 +53,126 @@ export function Card({ className, children, ...rest }: ComponentProps<'div'>) {
   );
 }
 
-export function Chip({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'accent' | 'warn' }) {
-  const t = { neutral: 'bg-surface-2 text-ink', accent: 'bg-accent-soft text-accent', warn: 'bg-warn-soft text-warn' }[tone];
-  return <span className={cx('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', t)}>{children}</span>;
+export function Chip({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'accent' | 'warn' | 'bad' | 'good' }) {
+  const t = {
+    neutral: 'bg-surface-2 text-ink',
+    accent: 'bg-accent-soft text-accent',
+    warn: 'bg-warn-soft text-warn',
+    bad: 'bg-error-soft text-error',
+    good: 'bg-success-soft text-success',
+  }[tone];
+  return <span className={cx('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', t)}>{children}</span>;
+}
+
+/* ---------- semantic tones: good / worry / bad ---------- */
+
+export const TONE_TEXT: Record<Tone, string> = { good: 'text-success', worry: 'text-warn', bad: 'text-error', neutral: '' };
+export const TONE_SOFT: Record<Tone, string> = {
+  good: 'bg-success-soft text-success',
+  worry: 'bg-warn-soft text-warn',
+  bad: 'bg-error-soft text-error',
+  neutral: 'bg-surface-2 text-muted',
+};
+const TONE_EDGE: Record<Tone, string> = {
+  good: 'border-l-success',
+  worry: 'border-l-warn',
+  bad: 'border-l-error',
+  neutral: 'border-l-line',
+};
+export const toneEdge = (t: Tone) => cx('border-l-4', TONE_EDGE[t]);
+
+/** Sign of a return: gains read green, losses red. */
+export const signTone = (v: number | undefined): Tone => (v === undefined || v === 0 ? 'neutral' : v > 0 ? 'good' : 'bad');
+
+export function ToneIcon({ tone, className }: { tone: Tone; className?: string }) {
+  const c = cx('h-4 w-4 shrink-0', className);
+  if (tone === 'good')
+    return (
+      <svg viewBox="0 0 20 20" aria-hidden="true" className={c}>
+        <circle cx="10" cy="10" r="8.25" fill="currentColor" opacity="0.18" />
+        <path d="M6 10.4 8.7 13 14 7.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  if (tone === 'worry')
+    return (
+      <svg viewBox="0 0 20 20" aria-hidden="true" className={c}>
+        <path d="M10 2.8 18 16.5H2L10 2.8Z" fill="currentColor" opacity="0.18" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M10 8v3.8M10 14.2v.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  if (tone === 'bad')
+    return (
+      <svg viewBox="0 0 20 20" aria-hidden="true" className={c}>
+        <circle cx="10" cy="10" r="8.25" fill="currentColor" opacity="0.18" />
+        <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={c}>
+      <circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10 9v5M10 6.2v.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Status pill with icon: the color is never the only signal, the label always says it. */
+export function TonePill({ tone, children, className }: { tone: Tone; children: ReactNode; className?: string }) {
+  return (
+    <span className={cx('inline-flex items-center gap-1 rounded-full py-0.5 pl-1.5 pr-2.5 text-xs font-semibold', TONE_SOFT[tone], className)}>
+      <ToneIcon tone={tone} className="h-3.5 w-3.5" />
+      {children}
+    </span>
+  );
+}
+
+/** Inline emphasis inside running text. */
+export function Hl({ tone, children }: { tone: Tone; children: ReactNode }) {
+  return <strong className={cx('font-semibold', TONE_TEXT[tone])}>{children}</strong>;
+}
+
+export type HlRule = [RegExp, Tone | ((match: string) => Tone)];
+
+/** Highlights the parts of a plain sentence that match the rules (first rule wins on overlap). */
+export function ToneText({ text, rules }: { text: string; rules: HlRule[] }) {
+  const out: ReactNode[] = [];
+  let rest = text;
+  let k = 0;
+  while (rest) {
+    let best: { i: number; m: string; tone: Tone } | undefined;
+    for (const [re, t] of rules) {
+      const m = new RegExp(re.source, re.flags.replace('g', '')).exec(rest);
+      if (m && m[0] && (!best || m.index < best.i)) best = { i: m.index, m: m[0], tone: typeof t === 'function' ? t(m[0]) : t };
+    }
+    if (!best) {
+      out.push(rest);
+      break;
+    }
+    if (best.i > 0) out.push(rest.slice(0, best.i));
+    out.push(
+      <Hl key={k++} tone={best.tone}>
+        {best.m}
+      </Hl>,
+    );
+    rest = rest.slice(best.i + best.m.length);
+  }
+  return <>{out}</>;
+}
+
+/** Signed percentages in free text: losses red, explicit gains green. */
+export const SIGNED_PCT_RULES: HlRule[] = [
+  [/[-−]\s?\d+(?:[.,]\d+)?\s?%/, 'bad'],
+  [/\+\s?\d+(?:[.,]\d+)?\s?%/, 'good'],
+];
+
+export function Callout({ tone, children, className, role }: { tone: Tone | 'accent'; children: ReactNode; className?: string; role?: string }) {
+  const bg = tone === 'accent' ? 'bg-accent-soft' : tone === 'neutral' ? 'bg-surface-2' : TONE_SOFT[tone].split(' ')[0];
+  const ic = tone === 'accent' ? 'text-accent' : TONE_TEXT[tone] || 'text-muted';
+  return (
+    <div role={role} className={cx('flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm text-ink', bg, className)}>
+      <ToneIcon tone={tone === 'accent' ? 'neutral' : tone} className={cx('mt-0.5 h-[1.125rem] w-[1.125rem]', ic)} />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
 }
 
 export function Skeleton({ className }: { className?: string }) {

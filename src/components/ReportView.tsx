@@ -5,13 +5,33 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Report, Metrics } from '@/lib/report';
 import type { InstrumentProfile } from '@/lib/data/types';
-import { profileFit, STATUS_LABEL, NA, type Knowledge } from '@/lib/profileFit';
+import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
+import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
 import { clearBenchmarkPref, pushRecentReport, useBenchmarkPref, useInvestorProfile } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
 import { AiSummary } from './AiSummary';
-import { BackLink, Button, ButtonLink, Card, Chip, InfoTip, SegmentedControl, Skeleton, Spinner, cx } from './ui';
+import {
+  BackLink,
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  Chip,
+  InfoTip,
+  SegmentedControl,
+  Skeleton,
+  Spinner,
+  TONE_TEXT,
+  TonePill,
+  ToneIcon,
+  ToneText,
+  cx,
+  signTone,
+  toneEdge,
+  type HlRule,
+} from './ui';
 
 const DEFAULT_BENCHMARK = 'VWCE.DE';
 const SYMBOL_RE = /^[A-Za-z0-9.\-=^]{1,20}$/;
@@ -61,6 +81,15 @@ function Rows({ rows }: { rows: [ReactNode, ReactNode][] }) {
   );
 }
 
+/** Percentage colored by sign (returns): gains green, losses red. */
+function SignedPct({ v, digits }: { v: number | undefined; digits?: number }) {
+  const s = fmtPct(v, digits);
+  if (s === NA) return <>{NA}</>;
+  return <span className={TONE_TEXT[signTone(v)]}>{v !== undefined && v > 0 ? `+${s}` : s}</span>;
+}
+
+const signedPct = (v: number | undefined): ReactNode => (v === undefined || !Number.isFinite(v) ? NA : <SignedPct v={v} />);
+
 function bestReturn(m: Metrics): { label: string; value?: number; note?: string } {
   if (m.return5y !== undefined) return { label: 'Rendimento annuo, 5 anni', value: m.return5y };
   if (m.return3y !== undefined) return { label: 'Rendimento annuo, 3 anni', value: m.return3y, note: '5 anni: dato non disponibile' };
@@ -68,10 +97,24 @@ function bestReturn(m: Metrics): { label: string; value?: number; note?: string 
   return { label: 'Rendimento annuo, 5 anni' };
 }
 
-function Figure({ label, value, tip, note }: { label: string; value: string; tip?: ReactNode; note?: string }) {
+function Figure({
+  label,
+  value,
+  tip,
+  note,
+  tone = 'neutral',
+  badge,
+}: {
+  label: string;
+  value: string;
+  tip?: ReactNode;
+  note?: string;
+  tone?: Tone;
+  badge?: string;
+}) {
   const na = !/\d/.test(value);
   return (
-    <div className="card flex flex-col rounded-2xl border border-line bg-surface p-3.5">
+    <div className={cx('card flex flex-col rounded-2xl border border-line bg-surface p-3.5', !na && tone !== 'neutral' && 'border-t-4', !na && { good: 'border-t-success', worry: 'border-t-warn', bad: 'border-t-error', neutral: '' }[tone])}>
       <dt className="flex items-start justify-between gap-1 text-sm leading-snug text-muted">
         <span className="pt-0.5">{label}</span>
         {tip && (
@@ -80,10 +123,20 @@ function Figure({ label, value, tip, note }: { label: string; value: string; tip
           </span>
         )}
       </dt>
-      <dd className={cx('mt-auto pt-1 tabular-nums', na ? 'text-base font-medium text-muted' : 'text-[1.75rem] font-semibold leading-tight tracking-tight')}>
+      <dd
+        className={cx(
+          'mt-auto pt-1 tabular-nums',
+          na ? 'text-base font-medium text-muted' : cx('text-[1.75rem] font-semibold leading-tight tracking-tight', TONE_TEXT[tone]),
+        )}
+      >
         {value}
       </dd>
-      {note && <dd className="mt-0.5 text-xs text-muted">{note}</dd>}
+      {badge && !na && (
+        <dd className="mt-1.5">
+          <TonePill tone={tone}>{badge}</TonePill>
+        </dd>
+      )}
+      {note && <dd className="mt-1 text-xs text-muted">{note}</dd>}
     </div>
   );
 }
@@ -180,6 +233,21 @@ export function ReportView({ symbol }: { symbol: string }) {
     [report, profile],
   );
 
+  const readings = useMemo(
+    () =>
+      report && profile
+        ? fit.map((f) =>
+            fitReading(f, profile, {
+              maxDrawdown: report.metrics.maxDrawdown?.value,
+              volatility: report.metrics.volatility,
+              currency: report.instrument.currency,
+              monthly: report.monthly,
+            }),
+          )
+        : [],
+    [fit, report, profile],
+  );
+
   if (!profile) return <ReportSkeleton />;
 
   function chooseBench(v: string) {
@@ -218,8 +286,11 @@ export function ReportView({ symbol }: { symbol: string }) {
     return (
       <div>
         {back}
-        <Card className="rise mt-2">
-          <h1 className="text-lg font-semibold">Report non disponibile</h1>
+        <Card className={cx('rise mt-2', toneEdge('bad'))}>
+          <h1 className="flex items-center gap-2 text-lg font-semibold">
+            <ToneIcon tone="bad" className="h-5 w-5 text-error" />
+            Report non disponibile
+          </h1>
           <p role="alert" className="mt-1 text-muted">
             {fetched.error}. Può capitare con strumenti poco scambiati o quando la fonte dati non risponde.
           </p>
@@ -243,11 +314,42 @@ export function ReportView({ symbol }: { symbol: string }) {
   const isEtf = ins.type === 'ETF';
   const benchPreset = PRESETS.find((p) => p.symbol === bench);
   const ddTol = -Math.abs(profile.maxDrawdownPct);
+  const ddTone = drawdownTone(dd?.value, profile.maxDrawdownPct);
+  const volTone = volatilityTone(m.volatility, profile.horizonYears);
+  const terT = terTone(ins.ter);
+  const retTone = signTone(best.value);
 
   const figures = [
-    <Figure key="ret" label={best.label} value={fmtPct(best.value)} note={best.note} tip={TERMS.ret} />,
-    <Figure key="dd" label="Perdita massima" value={fmtPct(dd?.value)} note={`La tua soglia: ${fmtNum(ddTol, 0)}%`} tip={TERMS.dd} />,
-    ...(rank >= 1 ? [<Figure key="vol" label="Volatilità annua" value={fmtPct(m.volatility)} tip={TERMS.vol} />] : []),
+    <Figure
+      key="ret"
+      label={best.label}
+      value={best.value !== undefined && best.value > 0 ? `+${fmtPct(best.value)}` : fmtPct(best.value)}
+      note={best.note}
+      tip={TERMS.ret}
+      tone={retTone}
+      badge={retTone === 'good' ? 'In guadagno' : retTone === 'bad' ? 'In perdita' : undefined}
+    />,
+    <Figure
+      key="dd"
+      label="Perdita massima"
+      value={fmtPct(dd?.value)}
+      note={`La tua soglia: ${fmtNum(ddTol, 0)}%`}
+      tip={TERMS.dd}
+      tone={ddTone}
+      badge={{ good: 'Entro la soglia', worry: 'Vicina alla soglia', bad: 'Oltre la soglia', neutral: undefined }[ddTone]}
+    />,
+    ...(rank >= 1
+      ? [
+          <Figure
+            key="vol"
+            label="Volatilità annua"
+            value={fmtPct(m.volatility)}
+            tip={TERMS.vol}
+            tone={volTone}
+            badge={{ good: 'Contenuta', worry: 'Ampia', bad: 'Molto ampia', neutral: undefined }[volTone]}
+          />,
+        ]
+      : []),
     ...(!isEtf
       ? [<Figure key="ter" label="Costo annuo (TER)" value="Non previsto" note="Il TER si applica ai fondi e agli ETF, non alle azioni." />]
       : [
@@ -255,6 +357,8 @@ export function ReportView({ symbol }: { symbol: string }) {
             key="ter"
             label="Costo annuo (TER)"
             value={fmtPct(ins.ter, 2)}
+            tone={terT}
+            badge={{ good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined }[terT]}
             tip={
               ins.ter !== undefined
                 ? `Spese correnti del fondo, già incluse nel prezzo. Con TER ${fmtPct(ins.ter, 2)}: circa ${fmtNum(ins.ter * 10000, 0)} € l'anno ogni 10.000 € investiti.`
@@ -278,7 +382,7 @@ export function ReportView({ symbol }: { symbol: string }) {
               {ins.exchange && <Chip>{exchangeLabel(ins.exchange)}</Chip>}
               {ins.sector && <Chip>{sectorLabel(ins.sector)}</Chip>}
               {nameTags(ins.name).map((t) => (
-                <Chip key={t} tone="warn">
+                <Chip key={t} tone={t === 'Strategia con opzioni' ? 'warn' : 'bad'}>
                   {t}
                 </Chip>
               ))}
@@ -333,20 +437,23 @@ export function ReportView({ symbol }: { symbol: string }) {
               <p className="-mt-1 mb-3 text-sm text-muted">
                 Soglia di perdita {fmtNum(profile.maxDrawdownPct, 0)}% · orizzonte {profile.horizonYears} {profile.horizonYears === 1 ? 'anno' : 'anni'}
               </p>
+              <FitTally tones={readings.map((r) => r.tone)} />
               <ul className="space-y-2">
-                {fit.map((f) => (
-                  <li key={f.id} className={cx('card rounded-2xl border border-line bg-surface p-4', f.status === 'oltre' && 'border-l-[3px] border-l-warn')}>
-                    {f.status !== 'info' && (
-                      <div className="mb-1.5">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium">
-                          <span aria-hidden="true" className={cx('h-1.5 w-1.5 rounded-full', f.status === 'oltre' ? 'bg-warn' : 'bg-muted')} />
-                          {STATUS_LABEL[f.status].replace(/^./, (c) => c.toUpperCase())}
-                        </span>
-                      </div>
-                    )}
-                    <p className="text-[0.9375rem] leading-6">{f.text}</p>
-                  </li>
-                ))}
+                {fit.map((f, i) => {
+                  const r = readings[i] ?? { tone: 'neutral' as Tone };
+                  return (
+                    <li key={f.id} className={cx('card rounded-2xl border border-line bg-surface p-4', toneEdge(r.tone))}>
+                      {r.label && (
+                        <div className="mb-1.5">
+                          <TonePill tone={r.tone}>{r.label}</TonePill>
+                        </div>
+                      )}
+                      <p className="text-[0.9375rem] leading-6">
+                        <ToneText text={f.text} rules={fitRules(f, r.tone)} />
+                      </p>
+                    </li>
+                  );
+                })}
               </ul>
               {fit.some((f) => f.id === 'rolling') && (
                 <details className="mt-2 rounded-xl px-1 text-sm">
@@ -371,9 +478,9 @@ export function ReportView({ symbol }: { symbol: string }) {
                   // With a working comparison, returns per period are already in the comparison table.
                   ...((!benchOk || sameAsBench
                     ? [
-                        ['Rendimento annuo, 1 anno', fmtPct(m.return1y)],
-                        ['Rendimento annuo, 3 anni', fmtPct(m.return3y)],
-                        ['Rendimento annuo, 5 anni', fmtPct(m.return5y)],
+                        ['Rendimento annuo, 1 anno', signedPct(m.return1y)],
+                        ['Rendimento annuo, 3 anni', signedPct(m.return3y)],
+                        ['Rendimento annuo, 5 anni', signedPct(m.return5y)],
                       ]
                     : []) as [string, ReactNode][]),
                   ...(rank >= 2 && m.volatilityYears
@@ -447,9 +554,9 @@ export function ReportView({ symbol }: { symbol: string }) {
               </Button>
             </form>
             {benchMsg && (
-              <p id="bench-msg" role="status" className="mt-2 rounded-xl bg-warn-soft px-3 py-2 text-sm">
-                {benchMsg}
-              </p>
+              <Callout tone="worry" role="status" className="mt-2">
+                <p id="bench-msg">{benchMsg}</p>
+              </Callout>
             )}
 
             <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
@@ -458,15 +565,15 @@ export function ReportView({ symbol }: { symbol: string }) {
                   Riferimento {bench}: {'error' in report.benchmark ? report.benchmark.error : NA}
                 </p>
               ) : sameAsBench ? (
-                <p className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm">
+                <Callout tone="accent" className="mt-4">
                   Lo strumento coincide con il riferimento scelto: seleziona un altro riferimento per vedere un confronto.
-                </p>
+                </Callout>
               ) : (
                 <>
                   {sameFund && (
-                    <p className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm">
+                    <Callout tone="accent" className="mt-4">
                       Il riferimento scelto è lo stesso strumento quotato su un&apos;altra borsa: i valori sono quasi identici.
-                    </p>
+                    </Callout>
                   )}
                   {rank >= 1 && <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />}
                   {report.chart.length > 0 ? (
@@ -491,9 +598,9 @@ export function ReportView({ symbol }: { symbol: string }) {
                 <Rows
                   rows={[
                     ['Ricavi', fmtBig(ins.fundamentals.revenue, ins.fundamentals.currency)],
-                    ['Utile netto', fmtBig(ins.fundamentals.netIncome, ins.fundamentals.currency)],
+                    ['Utile netto', <SignedBig key="ni" v={ins.fundamentals.netIncome} currency={ins.fundamentals.currency} />],
                     ['Debito totale', fmtBig(ins.fundamentals.totalDebt, ins.fundamentals.currency)],
-                    ['Free cash flow', fmtBig(ins.fundamentals.freeCashFlow, ins.fundamentals.currency)],
+                    ['Free cash flow', <SignedBig key="fcf" v={ins.fundamentals.freeCashFlow} currency={ins.fundamentals.currency} />],
                     ['Esercizio', ins.fundamentals.fiscalYear ?? NA],
                   ]}
                 />
@@ -539,12 +646,13 @@ export function ReportView({ symbol }: { symbol: string }) {
 }
 
 function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: InstrumentProfile; bm: Metrics }) {
-  const rows: [string, string, string][] = [
-    ['Rendimento annuo, 1 anno', fmtPct(am.return1y), fmtPct(bm.return1y)],
-    ['Rendimento annuo, 3 anni', fmtPct(am.return3y), fmtPct(bm.return3y)],
-    ['Rendimento annuo, 5 anni', fmtPct(am.return5y), fmtPct(bm.return5y)],
-    ['Volatilità annua', fmtPct(am.volatility), fmtPct(bm.volatility)],
-    ['Perdita massima storica', fmtPct(am.maxDrawdown?.value), fmtPct(bm.maxDrawdown?.value)],
+  // [label, a, b, higher is better, color by sign]
+  const rows: [string, number | undefined, number | undefined, boolean, boolean][] = [
+    ['Rendimento annuo, 1 anno', am.return1y, bm.return1y, true, true],
+    ['Rendimento annuo, 3 anni', am.return3y, bm.return3y, true, true],
+    ['Rendimento annuo, 5 anni', am.return5y, bm.return5y, true, true],
+    ['Volatilità annua', am.volatility, bm.volatility, false, false],
+    ['Perdita massima storica', am.maxDrawdown?.value, bm.maxDrawdown?.value, true, true],
   ];
   return (
     <table className="card mt-4 w-full table-fixed overflow-hidden rounded-2xl border border-line bg-surface text-left">
@@ -576,33 +684,104 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
         </tr>
       </thead>
       <tbody className="divide-y divide-line">
-        {rows.map(([k, x, y]) => (
-          <tr key={k}>
-            <th scope="row" className="px-4 py-2.5 text-sm font-normal text-muted">
-              {k}
-            </th>
-            <td className={cx('py-2.5 pr-3 text-right tabular-nums', x === NA ? 'text-xs text-muted' : 'font-medium')}>{x === NA ? 'n.d.' : x}</td>
-            <td className={cx('py-2.5 pr-4 text-right tabular-nums', y === NA ? 'text-xs text-muted' : 'font-medium')}>{y === NA ? 'n.d.' : y}</td>
-          </tr>
-        ))}
+        {rows.map(([k, x, y, higherBetter, signed]) => {
+          const both = x !== undefined && y !== undefined && x !== y;
+          const aWins = both && (higherBetter ? x > y : x < y);
+          return (
+            <tr key={k}>
+              <th scope="row" className="px-4 py-2.5 text-sm font-normal text-muted">
+                {k}
+              </th>
+              <CompareCell v={x} signed={signed} wins={aWins} className="pr-3" />
+              <CompareCell v={y} signed={signed} wins={both && !aWins} className="pr-4" />
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
 }
+
+function CompareCell({ v, signed, wins, className }: { v: number | undefined; signed: boolean; wins: boolean; className?: string }) {
+  if (v === undefined || !Number.isFinite(v)) return <td className={cx('py-2.5 text-right text-xs text-muted', className)}>n.d.</td>;
+  return (
+    <td className={cx('py-2.5 text-right tabular-nums', className)}>
+      <span className={cx('inline-flex items-center gap-1', wins ? 'font-bold' : 'font-medium')}>
+        {wins && <span className="sr-only">Migliore: </span>}
+        {wins && <ToneIcon tone="good" className="h-3.5 w-3.5 text-success" />}
+        {signed ? <SignedPct v={v} /> : fmtPct(v)}
+      </span>
+    </td>
+  );
+}
+
+function SignedBig({ v, currency }: { v: number | undefined; currency?: string }) {
+  const s = fmtBig(v, currency);
+  if (s === NA) return <>{NA}</>;
+  return <span className={TONE_TEXT[v !== undefined && v < 0 ? 'bad' : 'neutral']}>{s}</span>;
+}
+
+/** One-line summary of the profile readings: how many points are fine, to watch, or over. */
+function FitTally({ tones }: { tones: Tone[] }) {
+  const n = (t: Tone) => tones.filter((x) => x === t).length;
+  const items: [Tone, number, string][] = [
+    ['bad', n('bad'), 'oltre il tuo profilo'],
+    ['worry', n('worry'), 'da tenere d’occhio'],
+    ['good', n('good'), 'in linea'],
+  ];
+  const shown = items.filter(([, c]) => c > 0);
+  if (!shown.length) return null;
+  return (
+    <div className="mb-3 flex flex-wrap gap-1.5">
+      {shown.map(([t, c, label]) => (
+        <TonePill key={t} tone={t}>
+          {c} {label}
+        </TonePill>
+      ))}
+    </div>
+  );
+}
+
+const PCT_RE = /-?\d+(?:,\d+)?%/;
+
+/** Which words of each profile sentence carry the verdict. */
+function fitRules(f: FitStatement, tone: Tone): HlRule[] {
+  switch (f.id) {
+    case 'drawdown':
+      return [
+        [/perdita massima storica \([^)]+\)/, tone],
+        [/(supera la|è inferiore alla|coincide con la) soglia indicata \([^)]+\)( di [\d,]+ punt[oi])?/, tone],
+      ];
+    case 'volatility':
+      return [[/Volatilità annua [\d,]+%/, tone]];
+    case 'rolling':
+      return [[PCT_RE, (m) => (m.startsWith('-') ? 'bad' : m === '0,0%' ? 'neutral' : 'good')]];
+    case 'currency':
+      return [
+        [/nessuna esposizione al cambio sulla quotazione/, 'good'],
+        [/esposizione al cambio EUR\/\w+/, 'worry'],
+      ];
+  }
+}
+
+const BAR_COLORS = ['var(--bar-1)', 'var(--bar-2)', 'var(--bar-3)', 'var(--bar-4)', 'var(--bar-5)', 'var(--bar-6)'];
 
 function AllocList({ title, items }: { title: string; items: { key: string; name: string; weight: number }[] }) {
   return (
     <div>
       <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">{title}</h3>
       <ul className="mt-2 space-y-2.5">
-        {items.map((h) => (
+        {items.map((h, i) => (
           <li key={h.key}>
             <div className="flex justify-between gap-4 text-sm">
-              <span className="min-w-0 truncate">{h.name}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: BAR_COLORS[i % BAR_COLORS.length] }} />
+                <span className="truncate">{h.name}</span>
+              </span>
               <span className="font-medium tabular-nums">{fmtPct(h.weight)}</span>
             </div>
-            <div aria-hidden="true" className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-2">
-              <div className="h-full rounded-full bg-accent/70" style={{ width: `${Math.min(h.weight, 1) * 100}%` }} />
+            <div aria-hidden="true" className="mt-1 h-2 overflow-hidden rounded-full bg-surface-2">
+              <div className="h-full rounded-full" style={{ width: `${Math.min(h.weight, 1) * 100}%`, background: BAR_COLORS[i % BAR_COLORS.length] }} />
             </div>
           </li>
         ))}

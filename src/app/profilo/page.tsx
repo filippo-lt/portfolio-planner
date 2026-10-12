@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { flash, profileWarnings, saveInvestorProfile, useInvestorProfile, validateProfile, type ProfileErrors, type ProfileForm } from '@/lib/profileStore';
 import { parseItDecimal } from '@/lib/profileValidation';
 import type { Knowledge } from '@/lib/profileFit';
-import { Button, ButtonLink, Card, PageLoading, cx } from '@/components/ui';
+import { Button, ButtonLink, Callout, Card, PageLoading, cx } from '@/components/ui';
 
 const EMPTY: ProfileForm = { age: '', horizonYears: '', retirementAge: '', netWorthEur: '', maxDrawdownPct: '', knowledge: '' };
 
@@ -206,7 +206,7 @@ function DrawdownExtras({ form, setField }: { form: ProfileForm; setField: (k: k
               aria-pressed={on}
               className={cx(
                 'pressable min-h-11 rounded-full border text-sm font-medium tabular-nums',
-                on ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-surface text-ink hover:border-line-strong',
+                on ? 'border-accent bg-accent text-accent-fg' : 'border-accent/25 bg-surface text-accent hover:border-accent/60 hover:bg-accent-soft',
               )}
             >
               {v}%
@@ -216,11 +216,11 @@ function DrawdownExtras({ form, setField }: { form: ProfileForm; setField: (k: k
       </div>
       {Number.isFinite(worth) && worth > 0 && (
         // Space is reserved up front so the cards below never move under the user's finger.
-        <p className="mt-3 flex min-h-[3.25rem] items-center rounded-xl bg-surface-2 px-4 py-2 text-sm" aria-live="polite">
+        <p className={cx('mt-3 flex min-h-[3.25rem] items-center rounded-xl px-4 py-2 text-sm', ok ? 'bg-error-soft' : 'bg-surface-2')} aria-live="polite">
           {ok ? (
             <span>
               Con {eur(worth)} € investiti, una perdita del {String(dd).replace('.', ',')}% corrisponde a circa{' '}
-              <strong className="tabular-nums">{eur(Math.round((worth * dd) / 100))} €</strong>.
+              <strong className="tabular-nums text-error">−{eur(Math.round((worth * dd) / 100))} €</strong>.
             </span>
           ) : (
             <span className="text-muted">Scegli una percentuale per vedere a quanti euro corrisponde.</span>
@@ -302,7 +302,7 @@ function Onboarding() {
     return (
       <div className="rise mx-auto flex min-h-[calc(100dvh-10.5rem)] max-w-xl flex-col">
         <div className="flex-1">
-          <span aria-hidden="true" className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
+          <span aria-hidden="true" className="btn-primary grid h-14 w-14 place-items-center rounded-2xl text-accent-fg">
             <svg viewBox="0 0 24 24" className="h-7 w-7">
               <path d="M4 17l5-5 4 4 7-8" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -318,7 +318,7 @@ function Onboarding() {
               ['3', 'Leggi il report', 'Costi, rendimenti, rischio e confronto con il tuo profilo.'],
             ].map(([n, t, d]) => (
               <li key={n} className="flex gap-4">
-                <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-sm font-semibold">
+                <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-sm font-bold text-accent">
                   {n}
                 </span>
                 <span>
@@ -329,7 +329,7 @@ function Onboarding() {
             ))}
           </ol>
           <p className="mt-8 flex items-center gap-2 text-sm text-muted">
-            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 shrink-0">
+            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 shrink-0 text-success">
               <rect x="4" y="9" width="12" height="8" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
               <path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" strokeWidth="1.6" />
             </svg>
@@ -387,7 +387,7 @@ function Onboarding() {
         </button>
         <div className="flex flex-1 gap-1.5" aria-hidden="true">
           {STEPS.map((_, i) => (
-            <span key={i} className={cx('h-1.5 flex-1 rounded-full transition-colors', i <= step ? 'bg-accent' : 'bg-surface-2')} />
+            <span key={i} className={cx('h-1.5 flex-1 rounded-full transition-colors', i <= step ? 'btn-primary' : 'bg-surface-2')} />
           ))}
         </div>
         <span className="text-sm tabular-nums text-muted">
@@ -419,9 +419,9 @@ function Onboarding() {
             ),
           )}
           {warnings.map((w) => (
-            <p key={w} role="note" className="rounded-xl bg-warn-soft px-4 py-3 text-sm text-ink">
+            <Callout key={w} tone="worry" role="note">
               {w}
-            </p>
+            </Callout>
           ))}
         </div>
       </div>
@@ -506,9 +506,9 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
             onBlur={(v) => recheck('netWorthEur', v)}
           />
           {profileWarnings(form).map((w) => (
-            <p key={w} role="note" className="rounded-xl bg-warn-soft px-4 py-3 text-sm text-ink">
+            <Callout key={w} tone="worry" role="note">
               {w}
-            </p>
+            </Callout>
           ))}
         </Card>
         <Card className="space-y-7">
@@ -529,11 +529,11 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
 
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] -mx-4 mt-6 border-t border-line bg-bg/85 px-4 py-3 backdrop-blur-md empty:hidden sm:bottom-0 sm:mx-0 sm:rounded-2xl sm:border sm:px-3">
         {!dirty && !showSaved ? null : showSaved ? (
-          <div role="status" className="rise flex items-center gap-3 rounded-xl border border-line bg-surface p-2 pl-4">
+          <div role="status" className="rise flex items-center gap-3 rounded-xl border border-success-line bg-success-soft p-2 pl-4">
             <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 shrink-0 text-success">
               <path d="M4.5 10.5 8.5 14.5 15.5 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="flex-1 text-sm font-medium">Profilo salvato</span>
+            <span className="flex-1 text-sm font-semibold text-success">Profilo salvato</span>
             <ButtonLink href="/" variant="primary" className="min-h-11 px-4 text-sm">
               Vai alla ricerca
             </ButtonLink>
