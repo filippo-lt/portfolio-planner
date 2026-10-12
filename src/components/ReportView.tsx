@@ -7,11 +7,12 @@ import type { Report, Metrics } from '@/lib/report';
 import type { AssetClass, InstrumentProfile } from '@/lib/data/types';
 import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchmarks';
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
-import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
+import { drawdownTone, fitReading, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
 import { pushRecentReport, useBenchmarkPrefs, useInvestorProfile } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
+import { CostBlock } from './CostBlock';
 import { AiSummary } from './AiSummary';
 import {
   BackLink,
@@ -326,7 +327,7 @@ export function ReportView({ symbol }: { symbol: string }) {
   const ddTol = -Math.abs(profile.maxDrawdownPct);
   const ddTone = drawdownTone(dd?.value, profile.maxDrawdownPct);
   const volTone = volatilityTone(m.volatility, profile.horizonYears);
-  const terT = terTone(ins.ter);
+  const benchTer = benchOk?.profile.ter ?? (benchOk ? findBenchmark(benchOk.profile.symbol)?.ter : undefined);
   const retTone = signTone(best.value);
 
   const figures = [
@@ -360,22 +361,6 @@ export function ReportView({ symbol }: { symbol: string }) {
           />,
         ]
       : []),
-    ...(isStock
-      ? [<Figure key="ter" label="Costo annuo (TER)" value="Non previsto" note="Il TER si applica ai fondi e agli ETF, non alle azioni." />]
-      : [
-          <Figure
-            key="ter"
-            label="Costo annuo (TER)"
-            value={fmtPct(ins.ter, 2)}
-            tone={terT}
-            badge={{ good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined }[terT]}
-            tip={
-              ins.ter !== undefined
-                ? `Spese correnti del fondo, già incluse nel prezzo. Con TER ${fmtPct(ins.ter, 2)}: circa ${fmtNum(ins.ter * 10000, 0)} € l'anno ogni 10.000 € investiti.`
-                : 'Spese correnti del fondo, già incluse nel prezzo.'
-            }
-          />,
-        ]),
   ];
 
   return (
@@ -423,7 +408,9 @@ export function ReportView({ symbol }: { symbol: string }) {
             )}
           </div>
 
-          <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 4 ? 'sm:grid-cols-4 lg:grid-cols-2' : 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
+          <CostBlock fundTer={ins.ter} benchTer={benchTer} isStock={isStock} benchLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined} />
+
+          <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 3 && 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
             {figures}
           </dl>
 

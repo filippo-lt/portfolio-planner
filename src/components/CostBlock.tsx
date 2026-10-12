@@ -1,0 +1,54 @@
+import type { ReactNode } from 'react';
+import { EXAMPLE_AMOUNT, terCostPerYear } from '@/lib/costs';
+import { NA } from '@/lib/profileFit';
+import { fmtEur, fmtPct } from '@/lib/format';
+import { terTone } from '@/lib/tone';
+import { TONE_TEXT, TonePill, cx } from './ui';
+
+const BADGE = { good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined } as const;
+
+function Side({ title, ter, isStock, children }: { title: string; ter: number | undefined; isStock?: boolean; children?: ReactNode }) {
+  const tone = terTone(ter);
+  const cost = terCostPerYear(EXAMPLE_AMOUNT, ter);
+  const missing = ter === undefined;
+  return (
+    <div className="min-w-0">
+      <dt className="text-sm leading-snug text-muted">{title}</dt>
+      <dd
+        className={cx(
+          'mt-1 tabular-nums',
+          missing ? 'text-base font-medium text-muted' : cx('text-[1.75rem] font-semibold leading-tight tracking-tight', TONE_TEXT[tone]),
+        )}
+      >
+        {isStock ? 'Non previsto' : missing ? NA : fmtPct(ter, 2)}
+      </dd>
+      {!isStock && !missing && BADGE[tone] && (
+        <dd className="mt-1.5">
+          <TonePill tone={tone}>{BADGE[tone]}</TonePill>
+        </dd>
+      )}
+      <dd className="mt-1.5 text-xs text-muted">
+        {isStock
+          ? 'Il TER si applica ai fondi e agli ETF, non alle azioni.'
+          : cost === undefined
+            ? NA
+            : `Su ${fmtEur(EXAMPLE_AMOUNT)} il TER costa circa ${fmtEur(cost)} all'anno`}
+      </dd>
+      {children}
+    </div>
+  );
+}
+
+/** Cost card: fund and reference TER side by side. Further cost rows (entry/exit fees) go below the grid. */
+export function CostBlock({ fundTer, benchTer, isStock, benchLabel }: { fundTer: number | undefined; benchTer: number | undefined; isStock: boolean; benchLabel?: string }) {
+  return (
+    <div className="card mt-4 rounded-2xl border border-line bg-surface p-3.5">
+      <h2 className="text-sm font-semibold">Costo annuo (TER)</h2>
+      <p className="mt-0.5 text-xs text-muted">Spese correnti, già incluse nel prezzo.</p>
+      <dl className="mt-3 grid grid-cols-2 gap-3">
+        <Side title="Questo strumento" ter={fundTer} isStock={isStock} />
+        <Side title={benchLabel ? `Riferimento · ${benchLabel}` : 'Riferimento'} ter={benchTer} />
+      </dl>
+    </div>
+  );
+}

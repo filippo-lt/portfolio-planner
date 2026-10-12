@@ -47,3 +47,9 @@ export function fmtPctSigned(v: number, digits = 1): string {
   const s = fmtPct(v, digits);
   return v > 0 && s !== NA ? `+${s}` : s;
 }
+
+/** Whole euros: 1000 -> "1.000 €". */
+export function fmtEur(v: number | undefined | null): string {
+  if (v === undefined || v === null || !Number.isFinite(v)) return NA;
+  return `${new Intl.NumberFormat('it-IT', { maximumFractionDigits: 0, useGrouping: 'always' }).format(v)} €`;
+}
