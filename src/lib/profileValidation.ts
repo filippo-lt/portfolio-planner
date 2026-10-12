@@ -15,9 +15,17 @@ export interface ProfileForm {
 
 const INT_RE = /^\d{1,3}$/;
 const DECIMAL_RE = /^\d{1,12}([.,]\d{1,4})?$/;
+// Italian thousands grouping: "50.000", "1.234.567,89"
+const GROUPED_RE = /^\d{1,3}(\.\d{3})+(,\d{1,4})?$/;
 
 const int = (s: string) => (INT_RE.test(s.trim()) ? Number(s.trim()) : NaN);
-const dec = (s: string) => (DECIMAL_RE.test(s.trim()) ? Number(s.trim().replace(',', '.')) : NaN);
+/** Accepts "50000", "50.000", "1.234,5", "12.5", "12,5"; ignores spaces, € and %. */
+export function parseItDecimal(raw: string): number {
+  const s = raw.replace(/[\s€%]/g, '');
+  if (GROUPED_RE.test(s)) return Number(s.replace(/\./g, '').replace(',', '.'));
+  return DECIMAL_RE.test(s) ? Number(s.replace(',', '.')) : NaN;
+}
+const dec = parseItDecimal;
 
 export function validateProfile(f: ProfileForm): { profile?: InvestorProfile; errors: ProfileErrors } {
   const errors: ProfileErrors = {};

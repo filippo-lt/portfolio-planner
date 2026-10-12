@@ -17,6 +17,13 @@ describe('validateProfile', () => {
     expect(r.profile?.netWorthEur).toBe(1234.5);
     expect(r.profile?.maxDrawdownPct).toBe(12.5);
   });
+  it('reads Italian thousands separators', () => {
+    expect(validateProfile({ ...base, netWorthEur: '50.000' }).profile?.netWorthEur).toBe(50000);
+    expect(validateProfile({ ...base, netWorthEur: '1.234.567,89' }).profile?.netWorthEur).toBe(1234567.89);
+    expect(validateProfile({ ...base, netWorthEur: '€ 50.000' }).profile?.netWorthEur).toBe(50000);
+    expect(validateProfile({ ...base, maxDrawdownPct: '20%' }).profile?.maxDrawdownPct).toBe(20);
+    expect(validateProfile({ ...base, netWorthEur: '50.00.0' }).errors.netWorthEur).toBeDefined();
+  });
   it('rejects exponent and other non-strict numbers', () => {
     expect(validateProfile({ ...base, netWorthEur: '1e3' }).errors.netWorthEur).toBeDefined();
     expect(validateProfile({ ...base, age: '3e1' }).errors.age).toBeDefined();

@@ -1,20 +1,147 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f5f5f2;
+  --surface: #ffffff;
+  --surface-2: #efefeb;
+  --border: #e3e3dd;
+  --border-strong: #8a8d93;
+  --text: #16171a;
+  --muted: #565a61;
+  --accent: #3043c8;
+  --accent-hover: #2636a8;
+  --accent-fg: #ffffff;
+  --accent-soft: #eceefc;
+  --warn: #8a4b00;
+  --warn-soft: #fbf0dc;
+  --error: #a3261b;
+  --error-soft: #fcebe9;
+  --success: #1f6a43;
+  --chart-a: #3043c8;
+  --chart-b: #8a8d93;
+  --grid: #e8e8e3;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0f11;
+    --surface: #18191d;
+    --surface-2: #212226;
+    --border: #2b2c31;
+    --border-strong: #6d7079;
+    --text: #ececee;
+    --muted: #a3a6ad;
+    --accent: #8e9bff;
+    --accent-hover: #a9b3ff;
+    --accent-fg: #0e0f11;
+    --accent-soft: #22264a;
+    --warn: #f2b45c;
+    --warn-soft: #3a2a12;
+    --error: #ff8f84;
+    --error-soft: #3d1a17;
+    --success: #6fd29d;
+    --chart-a: #8e9bff;
+    --chart-b: #7d8089;
+    --grid: #26272b;
+    color-scheme: dark;
+  }
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  overscroll-behavior-y: none;
 }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Soft elevation in light mode; borders carry the separation in dark mode */
+.card {
+  box-shadow: 0 1px 2px rgb(20 20 15 / 0.04), 0 2px 8px -2px rgb(20 20 15 / 0.05);
+}
+@media (prefers-color-scheme: dark) {
+  .card { box-shadow: none; }
+}
+
+/* Native-feeling press feedback */
+.pressable {
+  transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
+}
+.pressable:active {
+  transform: scale(0.97);
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 0.5rem;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable, .pressable:active { transition: none; transform: none; }
+  .skeleton, .rise { animation: none; }
+}
+
+/* Bottom sheet (dialog) */
+dialog.sheet::backdrop {
+  background: rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(2px);
+}
+dialog.sheet[open] {
+  animation: sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.sheet[open] { animation: none; }
+}
+
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+

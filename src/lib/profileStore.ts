@@ -81,3 +81,54 @@ export function useBenchmarkPref(defaultValue: string): [string, (s: string) => 
   const set = useCallback((s: string) => write(BENCH_KEY, s), []);
   return [raw || defaultValue, set];
 }
+
+export function clearBenchmarkPref() {
+  try {
+    localStorage.removeItem(BENCH_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+  emit();
+}
+
+/* Recently opened reports, newest first. */
+const RECENT_KEY = 'recentReports';
+const RECENT_MAX = 6;
+export interface RecentItem {
+  symbol: string;
+  name: string;
+  type: 'ETF' | 'STOCK';
+}
+
+function parseRecent(raw: string): RecentItem[] {
+  try {
+    const a = JSON.parse(raw);
+    return Array.isArray(a)
+      ? a.filter((x) => x && typeof x.symbol === 'string' && typeof x.name === 'string' && (x.type === 'ETF' || x.type === 'STOCK')).slice(0, RECENT_MAX)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function useRecentReports(): RecentItem[] {
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(RECENT_KEY) ?? '[]',
+    () => '[]',
+  );
+  return useMemo(() => parseRecent(raw), [raw]);
+}
+
+export function pushRecentReport(item: RecentItem) {
+  const list = parseRecent(read(RECENT_KEY) ?? '[]').filter((x) => x.symbol !== item.symbol);
+  const next = JSON.stringify([item, ...list].slice(0, RECENT_MAX));
+  if (next !== read(RECENT_KEY)) write(RECENT_KEY, next);
+}
+
+export function clearRecentReports() {
+  write(RECENT_KEY, '[]');
+}
+
+/** One-shot, in-memory UI messages passed across client navigations. */
+export const flash = { welcome: false, profileSaved: false };
