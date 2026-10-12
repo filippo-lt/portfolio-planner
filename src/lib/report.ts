@@ -13,6 +13,7 @@ import {
 } from './metrics';
 
 export const DEFAULT_BENCHMARK = 'VWCE.DE';
+export const SYMBOL_RE = /^[A-Za-z0-9.\-=^]{1,20}$/;
 const HISTORY_YEARS = 20;
 
 export interface Metrics {
@@ -60,6 +61,7 @@ export function searchInstruments(q: string): Promise<SymbolCandidate[]> {
 }
 
 const profileOf = (s: string) => cached(`profile:${s}`, TTL_PROFILE, () => provider.getProfile(s));
+export const getInstrumentProfile = (s: string) => profileOf(s);
 const historyOf = (s: string) =>
   cached(`history:${s}:${HISTORY_YEARS}`, TTL_PRICES, () => provider.getHistory(s, HISTORY_YEARS));
 

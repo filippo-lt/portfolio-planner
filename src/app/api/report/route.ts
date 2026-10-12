@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { buildReport, DEFAULT_BENCHMARK } from '@/lib/report';
-
-const SYMBOL_RE = /^[A-Za-z0-9.\-=^]{1,20}$/;
+import { buildReport, DEFAULT_BENCHMARK, SYMBOL_RE } from '@/lib/report';
 
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
