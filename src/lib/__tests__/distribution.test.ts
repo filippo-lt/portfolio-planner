@@ -54,7 +54,7 @@ describe('simulate distributing', () => {
   });
   it('works on the last-12-months window', () => {
     const r = simulate({ amount: 1000, prices: adj, rawPrices: raw, dividends, from: '2024-07-01' })!;
-    expect(r.grossValue).toBeCloseTo((1000 * 98 * 0 + 1000 * 100) / 98);
+    expect(r.grossValue).toBeCloseTo((1000 * 100) / 98);
     expect(r.dividendsEur).toBeCloseTo(0);
   });
 });
