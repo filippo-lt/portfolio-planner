@@ -1,7 +1,11 @@
 import YahooFinance from 'yahoo-finance2';
 import type { DataProvider } from './provider';
+import { classifyAssetClass } from '../assetClass';
+import { findBenchmark } from '../benchmarks';
+import { ISIN_RE } from '../isin';
 import type {
   Allocation,
+  DividendEvent,
   Fundamentals,
   Holding,
   InstrumentProfile,
@@ -9,6 +13,8 @@ import type {
   PricePoint,
   SymbolCandidate,
 } from './types';
+
+export { ISIN_RE };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const yf: any = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
@@ -23,7 +29,6 @@ function withTimeout(p: Promise<any>, ms = TIMEOUT_MS): Promise<any> {
 }
 const LOOSE = { validateResult: false };
 
-export const ISIN_RE = /^[A-Z]{2}[A-Z0-9]{9}\d$/;
 
 const FIGI_EXCH_SUFFIX: Record<string, string> = {
   GY: '.DE',
@@ -60,6 +65,9 @@ const MIN_STOCK_SHARE = 0.1;
 
 const num = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+
+const str = (v: unknown): string | undefined =>
+  typeof v === 'string' && v.trim() ? v.trim() : undefined;
 
 function mapType(quoteType: unknown): InstrumentType | undefined {
   if (quoteType === 'ETF') return 'ETF';
@@ -185,6 +193,10 @@ export class YahooProvider implements DataProvider {
       exchange: price.exchangeName ?? price.exchange ?? '',
     };
 
+    // Yahoo has no ISIN; OpenFIGI ticker lookups return FIGI data but no ISIN, so only the curated list can fill it.
+    const isin = (findBenchmark(symbol) ?? findBenchmark(profile.symbol))?.isin;
+    if (isin) profile.isin = isin;
+
     if (type !== 'STOCK') {
       const ter =
         num(s?.fundProfile?.feesExpensesInvestment?.annualReportExpenseRatio) ??
@@ -225,6 +237,16 @@ export class YahooProvider implements DataProvider {
       const country = s?.assetProfile?.country;
       if (country) profile.country = country;
     }
+    const { assetClass, reason } = classifyAssetClass({
+      type,
+      name: profile.name,
+      category: str(s?.fundProfile?.categoryName),
+      stockPosition: num(s?.topHoldings?.stockPosition),
+      bondPosition: num(s?.topHoldings?.bondPosition),
+      cashPosition: num(s?.topHoldings?.cashPosition),
+    });
+    profile.assetClass = assetClass;
+    profile.assetClassReason = reason;
     return profile;
   }
 
@@ -251,13 +273,37 @@ export class YahooProvider implements DataProvider {
   }
 
   async getHistory(symbol: string, years: number): Promise<PricePoint[]> {
+    return this.closes(symbol, years, true);
+  }
+
+  async getRawHistory(symbol: string, years: number): Promise<PricePoint[]> {
+    return this.closes(symbol, years, false);
+  }
+
+  async getDividends(symbol: string, years: number): Promise<DividendEvent[]> {
+    const res = await this.chart(symbol, years, 'div');
+    const offsetMs = (num(res?.meta?.gmtoffset) ?? 0) * 1000;
+    const out: DividendEvent[] = [];
+    for (const d of res?.events?.dividends ?? []) {
+      const amount = num(d.amount);
+      if (amount === undefined || amount <= 0 || !d.date) continue;
+      out.push({ date: new Date(new Date(d.date).getTime() + offsetMs).toISOString().slice(0, 10), amount });
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  private chart(symbol: string, years: number, events?: string): Promise<any> {
     const period1 = new Date(Date.now() - years * 365.25 * 24 * 3600 * 1000);
-    const res: any = await withTimeout(yf.chart(symbol, { period1, interval: '1d' }, LOOSE));
+    return withTimeout(yf.chart(symbol, { period1, interval: '1d', ...(events ? { events } : {}) }, LOOSE));
+  }
+
+  private async closes(symbol: string, years: number, adjusted: boolean): Promise<PricePoint[]> {
+    const res: any = await this.chart(symbol, years);
     // Express each timestamp in the exchange's local calendar day (gmtoffset is in seconds).
     const offsetMs = (num(res?.meta?.gmtoffset) ?? 0) * 1000;
     const out: PricePoint[] = [];
     for (const q of res?.quotes ?? []) {
-      const close = num(q.adjclose) ?? num(q.close);
+      const close = adjusted ? (num(q.adjclose) ?? num(q.close)) : num(q.close);
       if (close === undefined || close <= 0 || !q.date) continue;
       out.push({ date: new Date(new Date(q.date).getTime() + offsetMs).toISOString().slice(0, 10), close });
     }

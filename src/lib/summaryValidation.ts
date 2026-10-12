@@ -1,7 +1,8 @@
 /** Pure helpers to check that an AI summary only uses numbers present in its input. */
+import { findBannedWords } from './tone';
 
-export const SUMMARY_FORBIDDEN =
-  /ottim|rischios|conveni|sicur|favorev|sconsig|prudente|consigli|raccomand|adatt|buon|cattiv|compra|vend|dovrebbe|prevedi|previsione|migliore|meglio|ideale|acquist|dovresti|scegli|peggior|evita|opportun/i;
+/** Extra words rejected only in AI output (UI instructions such as "Scegli un riferimento" are fine). */
+const SUMMARY_ONLY_BANNED = /(?<![\p{L}\p{N}_])(?:scegli\p{L}*|evita\p{L}*|opportun\p{L}*|previsione|previsioni|prevedi\p{L}*)(?![\p{L}\p{N}_])/iu;
 
 /** Italian number words (ambiguous ones such as "uno/una/sei" are left out). The model is told to use digits only. */
 export const NUMBER_WORDS =
@@ -134,7 +135,7 @@ export function findUnknownNumbers(output: string, input: unknown): string[] {
 
 export function validateSummary(output: string, input: unknown): { ok: boolean; reason?: string } {
   if (!output.trim()) return { ok: false, reason: 'vuoto' };
-  if (SUMMARY_FORBIDDEN.test(output)) return { ok: false, reason: 'parole non ammesse' };
+  if (findBannedWords(output).length || SUMMARY_ONLY_BANNED.test(output)) return { ok: false, reason: 'parole non ammesse' };
   if (NUMBER_WORDS.test(output)) return { ok: false, reason: 'numeri scritti a parole' };
   const bad = findUnknownNumbers(output, input);
   if (bad.length) return { ok: false, reason: `numeri non presenti nei dati: ${bad.join(', ')}` };

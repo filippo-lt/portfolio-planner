@@ -31,6 +31,7 @@ Scrivi da 3 a 5 frasi neutre che descrivono SOLO i numeri presenti nel JSON forn
 Regole:
 - Usa esclusivamente numeri presenti nel JSON (percentuali già indicate o ricavabili moltiplicando per 100 una frazione). Nessun nuovo calcolo, nessuna stima, nessun arrotondamento diverso da quello dei dati.
 - Nessuna opinione, nessun consiglio, nessuna previsione, nessuna raccomandazione. Nessun giudizio di valore (evita aggettivi come buono, cattivo, ottimo, adatto, sicuro, rischioso).
+- Non suggerire mai di comprare, vendere o tenere un prodotto e non indicare un prodotto come preferibile a un altro. Non usare parole di classifica o di giudizio (migliore, peggiore, conviene, consigliato, raccomandato, compra, acquista, dovresti).
 - Se un dato manca, scrivi "Dato non disponibile" invece di ipotizzarlo.
 - Per i confronti con il profilo dell'investitore riporta i fatti nella forma presente in "fit".
 - Adatta il livello di dettaglio: "base" = pochi numeri chiave; "intermedio" = più numeri; "avanzato" = tutti i numeri rilevanti.

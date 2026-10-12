@@ -1,13 +1,21 @@
 'use client';
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { InstrumentType } from './data/types';
+import type { AssetClass, InstrumentType } from './data/types';
 import type { InvestorProfile } from './profileFit';
+import { isTaxCountry } from './tax';
+import type { TaxCountry } from './tax/types';
+import { parseUserFees, type UserFees } from './fees';
 import { validateProfile } from './profileValidation';
+import { DEFAULT_FX_COST, MAX_FX_COST } from './fx';
+import { DEFAULT_SIM_AMOUNT, MAX_SIM_AMOUNT } from './simulation';
 import { THEME_KEY, type ThemePref } from './theme';
 
 const PROFILE_KEY = 'investorProfile';
 const BENCH_KEY = 'benchmarkSymbol';
+const FEES_KEY = 'feeOverrides';
+const AMOUNT_KEY = 'simAmount';
+const FX_COST_KEY = 'fxCost';
 const VERSION = 1;
 const LOADING = '__loading__';
 
@@ -41,7 +49,7 @@ function write(key: string, value: string) {
 export { validateProfile, profileWarnings } from './profileValidation';
 export type { ProfileErrors, ProfileForm } from './profileValidation';
 
-function parseProfile(raw: string | null): InvestorProfile | null {
+export function parseProfile(raw: string | null): InvestorProfile | null {
   if (!raw) return null;
   try {
     const o = JSON.parse(raw);
@@ -53,6 +61,7 @@ function parseProfile(raw: string | null): InvestorProfile | null {
       netWorthEur: String(o.profile.netWorthEur),
       maxDrawdownPct: String(o.profile.maxDrawdownPct),
       knowledge: o.profile.knowledge,
+      taxCountry: isTaxCountry(o.profile.taxCountry) ? (o.profile.taxCountry as TaxCountry) : '',
     });
     return Object.keys(errors).length ? null : (profile ?? null);
   } catch {
@@ -74,23 +83,117 @@ export function saveInvestorProfile(p: InvestorProfile) {
   write(PROFILE_KEY, JSON.stringify({ v: VERSION, profile: p }));
 }
 
-export function useBenchmarkPref(defaultValue: string): [string, (s: string) => void] {
+/** Saved benchmark symbol per asset class, so a choice made for one kind of fund never affects another. */
+export type BenchmarkPrefs = Partial<Record<AssetClass, string>>;
+
+const ASSET_CLASSES: AssetClass[] = ['equity', 'bond', 'mixed', 'other', 'unknown'];
+
+/**
+ * Reads the stored value. Legacy formats are kept: a plain string and `{symbol, assetClass}`
+ * both become a single slot (a plain string has unknown class).
+ */
+export function parseBenchmarkPrefs(raw: string | null): BenchmarkPrefs {
+  if (!raw) return {};
+  if (!raw.startsWith('{')) return { unknown: raw };
+  try {
+    const o = JSON.parse(raw);
+    if (!o || typeof o !== 'object') return {};
+    if (typeof o.symbol === 'string') {
+      return o.symbol ? { [ASSET_CLASSES.includes(o.assetClass) ? o.assetClass : 'unknown']: o.symbol } : {};
+    }
+    const out: BenchmarkPrefs = {};
+    for (const c of ASSET_CLASSES) if (typeof o[c] === 'string' && o[c]) out[c] = o[c];
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function useBenchmarkPrefs(): [BenchmarkPrefs, (assetClass: AssetClass, symbol: string) => void, (assetClass: AssetClass) => void] {
   const raw = useSyncExternalStore(
     subscribe,
     () => read(BENCH_KEY) ?? '',
     () => '',
   );
-  const set = useCallback((s: string) => write(BENCH_KEY, s), []);
-  return [raw || defaultValue, set];
+  const prefs = useMemo(() => parseBenchmarkPrefs(raw), [raw]);
+  const set = useCallback((assetClass: AssetClass, symbol: string) => {
+    write(BENCH_KEY, JSON.stringify({ ...parseBenchmarkPrefs(read(BENCH_KEY)), [assetClass]: symbol }));
+  }, []);
+  const clear = useCallback((assetClass: AssetClass) => {
+    const { [assetClass]: _drop, ...rest } = parseBenchmarkPrefs(read(BENCH_KEY));
+    void _drop;
+    write(BENCH_KEY, JSON.stringify(rest));
+  }, []);
+  return [prefs, set, clear];
 }
 
-export function clearBenchmarkPref() {
+/** Fees the user typed for one symbol; only used when the data has none. Stored as a map keyed by upper-case symbol. */
+function readFeeMap(raw: string | null): Record<string, UserFees> {
+  if (!raw) return {};
   try {
-    localStorage.removeItem(BENCH_KEY);
+    const o = JSON.parse(raw);
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return {};
+    const out: Record<string, UserFees> = {};
+    for (const [k, v] of Object.entries(o)) {
+      const fees = parseUserFees(v);
+      if (fees.entry !== undefined || fees.exit !== undefined) out[k] = fees;
+    }
+    return out;
   } catch {
-    /* storage unavailable */
+    return {};
   }
-  emit();
+}
+
+export function useFeeOverride(symbol: string): [UserFees, (fees: UserFees) => void] {
+  const key = symbol.toUpperCase();
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(FEES_KEY) ?? '',
+    () => '',
+  );
+  const fees = useMemo(() => readFeeMap(raw || null)[key] ?? {}, [raw, key]);
+  const set = useCallback(
+    (next: UserFees) => {
+      const { [key]: _drop, ...rest } = readFeeMap(read(FEES_KEY));
+      void _drop;
+      const clean = parseUserFees(next);
+      write(FEES_KEY, JSON.stringify(clean.entry === undefined && clean.exit === undefined ? rest : { ...rest, [key]: clean }));
+    },
+    [key],
+  );
+  return [fees, set];
+}
+
+const validAmount = (v: number) => Number.isFinite(v) && v > 0 && v <= MAX_SIM_AMOUNT;
+
+/** Euro amount used by the simulation and the cost lines; default 1.000 €. */
+export function useSimAmount(): [number, (amount: number) => void] {
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(AMOUNT_KEY) ?? '',
+    () => '',
+  );
+  const amount = useMemo(() => (validAmount(Number(raw || NaN)) ? Number(raw) : DEFAULT_SIM_AMOUNT), [raw]);
+  const set = useCallback((next: number) => {
+    if (validAmount(next)) write(AMOUNT_KEY, String(next));
+  }, []);
+  return [amount, set];
+}
+
+const validFxCost = (v: number) => Number.isFinite(v) && v >= 0 && v <= MAX_FX_COST;
+
+/** FX spread per conversion as a fraction; default 0,25%. `isUser` tells whether the user entered it. */
+export function useFxCost(): [number, (cost: number) => void, boolean] {
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(FX_COST_KEY) ?? '',
+    () => '',
+  );
+  const isUser = raw !== '' && validFxCost(Number(raw));
+  const set = useCallback((next: number) => {
+    if (validFxCost(next)) write(FX_COST_KEY, String(next));
+  }, []);
+  return [isUser ? Number(raw) : DEFAULT_FX_COST, set, isUser];
 }
 
 /* Recently opened reports, newest first. */
@@ -155,7 +258,7 @@ export function setThemePref(p: ThemePref) {
 
 /** Wipes everything the app saved on this device except the appearance choice. */
 export function clearAllUserData() {
-  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY]) {
+  for (const key of [PROFILE_KEY, BENCH_KEY, RECENT_KEY, FEES_KEY, AMOUNT_KEY, FX_COST_KEY]) {
     try {
       localStorage.removeItem(key);
     } catch {

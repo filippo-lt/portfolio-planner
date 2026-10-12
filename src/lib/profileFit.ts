@@ -1,5 +1,6 @@
 /** Isomorphic and pure: safe to import from client components. */
 import type { PricePoint } from './data/types';
+import type { TaxCountry } from './tax/types';
 import { rollingReturnRange, spanYears } from './metrics';
 
 export type Knowledge = 'base' | 'intermedio' | 'avanzato';
@@ -14,6 +15,8 @@ export interface InvestorProfile {
   /** Max acceptable drawdown on the whole portfolio, positive percent (20 = -20%) */
   maxDrawdownPct: number;
   knowledge: Knowledge;
+  /** Tax residence; optional, tax is not estimated without a supported country */
+  taxCountry?: TaxCountry;
 }
 
 export interface FitInput {

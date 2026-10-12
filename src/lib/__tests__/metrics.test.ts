@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { annualizedReturn, annualizedVolatility, maxDrawdown, monthlyCloses, rebase, rollingReturnRange } from '../metrics';
+import { chartGap, annualizedReturn, annualizedVolatility, maxDrawdown, monthlyCloses, rebase, rollingReturnRange } from '../metrics';
 import type { PricePoint } from '../data/types';
 
 function series(n: number, f: (i: number) => number, end = '2025-01-01'): PricePoint[] {
@@ -99,5 +99,30 @@ describe('monthlyCloses / rollingReturnRange', () => {
   it('is undefined if history shorter than horizon', () => {
     const p = series(100, () => 100);
     expect(rollingReturnRange(p, 5)).toBeUndefined();
+  });
+});
+
+describe('chartGap', () => {
+  const pt = (date: string, a: number, b: number) => ({ date, a, b });
+  it('is null for an empty chart', () => {
+    expect(chartGap([], 'A', 'B')).toBeNull();
+  });
+  it('uses years and signed Italian percentages', () => {
+    expect(chartGap([pt('2020-01-01', 100, 100), pt('2025-01-01', 150.5, 80)], 'AAA', 'BBB')).toBe(
+      'In 5 anni AAA è +50,5% e BBB è -20,0%.',
+    );
+  });
+  it('uses months under one year', () => {
+    expect(chartGap([pt('2024-01-01', 100, 100), pt('2024-07-01', 110, 105)], 'A', 'B')).toBe(
+      'In 6 mesi A è +10,0% e B è +5,0%.',
+    );
+  });
+  it('uses years and months, never rounding up to the next year', () => {
+    expect(chartGap([pt('2020-01-01', 100, 100), pt('2024-08-15', 110, 105)], 'A', 'B')).toContain('In 4 anni e 7 mesi A');
+    expect(chartGap([pt('2023-01-01', 100, 100), pt('2024-02-01', 110, 105)], 'A', 'B')).toContain('In 1 anno e 1 mese A');
+    expect(chartGap([pt('2024-01-01', 100, 100), pt('2024-09-01', 110, 105)], 'A', 'B')).toContain('In 8 mesi A');
+  });
+  it('uses singular for one year', () => {
+    expect(chartGap([pt('2024-01-01', 100, 100), pt('2025-01-01', 101, 99)], 'A', 'B')).toContain('In 1 anno');
   });
 });

@@ -4,13 +4,19 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Report, Metrics } from '@/lib/report';
-import type { InstrumentProfile } from '@/lib/data/types';
+import type { AssetClass, InstrumentProfile } from '@/lib/data/types';
+import { benchmarksFor, defaultBenchmarkFor, findBenchmark } from '@/lib/benchmarks';
 import { profileFit, NA, type FitStatement, type Knowledge } from '@/lib/profileFit';
-import { drawdownTone, fitReading, terTone, volatilityTone, type Tone } from '@/lib/tone';
+import { drawdownTone, fitReading, volatilityTone, type Tone } from '@/lib/tone';
 import { fmtBig, fmtDate, fmtNum, fmtPct } from '@/lib/format';
-import { clearBenchmarkPref, pushRecentReport, useBenchmarkPref, useInvestorProfile } from '@/lib/profileStore';
+import { pushRecentReport, useBenchmarkPrefs, useFeeOverride, useFxCost, useInvestorProfile, useSimAmount } from '@/lib/profileStore';
 import { countryLabel, exchangeLabel, nameTags, sectorLabel, typeLabel } from '@/lib/labels';
 import { PriceChart } from './PriceChart';
+import { CostBlock } from './CostBlock';
+import { FeeRows } from './FeeRows';
+import { effectiveFees } from '@/lib/fees';
+import { EuroVerdict, chartSeries } from './EuroVerdict';
+import { SimilarProducts } from './SimilarProducts';
 import { AiSummary } from './AiSummary';
 import {
   BackLink,
@@ -33,17 +39,9 @@ import {
   type HlRule,
 } from './ui';
 
-const DEFAULT_BENCHMARK = 'VWCE.DE';
 const SYMBOL_RE = /^[A-Za-z0-9.\-=^]{1,20}$/;
 const LEVEL_RANK: Record<Knowledge, number> = { base: 0, intermedio: 1, avanzato: 2 };
 const FALLBACK_ERR = 'Strumento non trovato o dati non disponibili';
-
-const PRESETS = [
-  { symbol: 'VWCE.DE', label: 'Azioni mondo', detail: 'FTSE All-World' },
-  { symbol: 'SWDA.MI', label: 'Azioni paesi sviluppati', detail: 'MSCI World' },
-  { symbol: 'SXR8.DE', label: 'Azioni USA', detail: 'S&P 500' },
-  { symbol: 'AGGH.MI', label: 'Obbligazioni globali', detail: 'Global Aggregate' },
-];
 
 const TERMS = {
   ret: 'Guadagno o perdita medio per anno nel periodo, calcolato come se fosse stato uguale ogni anno.',
@@ -165,22 +163,31 @@ function ReportSkeleton() {
 export function ReportView({ symbol }: { symbol: string }) {
   const router = useRouter();
   const profile = useInvestorProfile();
-  const [bench, setBench] = useBenchmarkPref(DEFAULT_BENCHMARK);
+  const [benchPrefs, setBenchPref, clearBenchPref] = useBenchmarkPrefs();
+  const [userFees, setUserFees] = useFeeOverride(symbol);
+  const [simAmount, setSimAmount] = useSimAmount();
+  const [fxCost, setFxCost, fxCostIsUser] = useFxCost();
+  const [showOptional, setShowOptional] = useState(false);
   const [custom, setCustom] = useState('');
   const [benchMsg, setBenchMsg] = useState<string>();
   const [levelOverride, setLevelOverride] = useState<Knowledge | null>(null);
   const [fetched, setFetched] = useState<Fetched | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
-  const lastGood = useRef<string | null>(null);
+  const lastGood = useRef<{ symbol: string; cls: AssetClass } | null>(null);
 
   useEffect(() => {
     if (profile === null) router.replace('/profilo');
   }, [profile, router]);
 
+  // The class is known once a report for this symbol has loaded; until then ask for no benchmark
+  // and let the server pick the class default.
+  const knownClass: AssetClass | undefined =
+    fetched?.symbol === symbol ? (fetched.report?.instrument.assetClass ?? (fetched.report ? 'unknown' : undefined)) : undefined;
+  const bench = (knownClass && benchPrefs[knownClass]) || '';
   const key = `${symbol}|${bench}|${reloadTick}`;
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/report?symbol=${encodeURIComponent(symbol)}&benchmark=${encodeURIComponent(bench)}`)
+    fetch(`/api/report?symbol=${encodeURIComponent(symbol)}${bench ? `&benchmark=${encodeURIComponent(bench)}` : ''}`)
       .then(async (r) => {
         const j = await r.json();
         if (cancelled) return;
@@ -189,17 +196,20 @@ export function ReportView({ symbol }: { symbol: string }) {
           return;
         }
         const rep = j as Report;
+        const cls = rep.instrument.assetClass ?? 'unknown';
         if ('error' in rep.benchmark) {
           // Never leave the user with a broken comparison: fall back to the last working benchmark.
-          const fallback = lastGood.current ?? (bench !== DEFAULT_BENCHMARK ? DEFAULT_BENCHMARK : null);
+          const def = defaultBenchmarkFor(cls);
+          const good = lastGood.current?.cls === cls ? lastGood.current.symbol : null;
+          const fallback = bench ? (good ?? (bench !== def ? (def ?? null) : null)) : null;
           if (fallback && fallback !== bench) {
             setBenchMsg(`${bench}: dati non trovati. Il confronto resta con ${fallback}.`);
-            if (fallback === DEFAULT_BENCHMARK) clearBenchmarkPref();
-            else setBench(fallback);
+            if (fallback === def) clearBenchPref(cls);
+            else setBenchPref(cls, fallback);
             return;
           }
         } else {
-          lastGood.current = bench;
+          lastGood.current = { symbol: bench || rep.benchmark.profile.symbol, cls };
         }
         setFetched({ key, symbol, report: rep });
       })
@@ -207,7 +217,7 @@ export function ReportView({ symbol }: { symbol: string }) {
     return () => {
       cancelled = true;
     };
-  }, [key, symbol, bench, setBench]);
+  }, [key, symbol, bench, setBenchPref, clearBenchPref]);
 
   // Keep showing the current report while only the benchmark changes.
   const report = fetched?.symbol === symbol ? fetched.report : undefined;
@@ -216,6 +226,11 @@ export function ReportView({ symbol }: { symbol: string }) {
   const rank = LEVEL_RANK[level];
 
   const ins = report?.instrument;
+  const insClass: AssetClass = ins?.assetClass ?? 'unknown';
+  // Stable series for the euro box and the similar products: typing an amount must not rebuild them
+  const fundSeries = useMemo(() => (report ? (report.chart.length > 0 ? chartSeries(report.chart, 'a') : report.monthly) : []), [report]);
+  const benchSeries = useMemo(() => (report && report.chart.length > 0 ? chartSeries(report.chart, 'b') : []), [report]);
+  const presets = benchmarksFor(insClass);
   useEffect(() => {
     if (ins) pushRecentReport({ symbol, name: ins.name, type: ins.type });
   }, [ins, symbol]);
@@ -252,9 +267,9 @@ export function ReportView({ symbol }: { symbol: string }) {
 
   function chooseBench(v: string) {
     setBenchMsg(undefined);
-    if (PRESETS.some((p) => p.symbol === v)) setCustom('');
-    if (v === DEFAULT_BENCHMARK) clearBenchmarkPref();
-    else setBench(v);
+    if (presets.some((p) => p.symbol === v)) setCustom('');
+    if (v === defaultBenchmarkFor(insClass)) clearBenchPref(insClass);
+    else setBenchPref(insClass, v);
   }
 
   function submitCustom(e: React.FormEvent) {
@@ -312,11 +327,17 @@ export function ReportView({ symbol }: { symbol: string }) {
   const best = bestReturn(m);
   const dd = m.maxDrawdown;
   const isStock = ins.type === 'STOCK';
-  const benchPreset = PRESETS.find((p) => p.symbol === bench);
+  const needsChoice = !benchOk && 'error' in report.benchmark && report.benchmark.symbol === '';
+  const activeBench = bench || (benchOk?.profile.symbol ?? '');
+  const hasOptional = presets.some((p) => p.optional);
+  const optionalActive = presets.some((p) => p.optional && p.symbol.toUpperCase() === activeBench.toUpperCase());
+  const shownPresets = presets.filter((p) => !p.optional || showOptional || optionalActive);
+  const benchPreset = presets.find((p) => p.symbol.toUpperCase() === activeBench.toUpperCase());
+  const noPresets = presets.length === 0;
   const ddTol = -Math.abs(profile.maxDrawdownPct);
   const ddTone = drawdownTone(dd?.value, profile.maxDrawdownPct);
   const volTone = volatilityTone(m.volatility, profile.horizonYears);
-  const terT = terTone(ins.ter);
+  const benchTer = benchOk?.profile.ter ?? (benchOk ? findBenchmark(benchOk.profile.symbol)?.ter : undefined);
   const retTone = signTone(best.value);
 
   const figures = [
@@ -350,22 +371,6 @@ export function ReportView({ symbol }: { symbol: string }) {
           />,
         ]
       : []),
-    ...(isStock
-      ? [<Figure key="ter" label="Costo annuo (TER)" value="Non previsto" note="Il TER si applica ai fondi e agli ETF, non alle azioni." />]
-      : [
-          <Figure
-            key="ter"
-            label="Costo annuo (TER)"
-            value={fmtPct(ins.ter, 2)}
-            tone={terT}
-            badge={{ good: 'Costo basso', worry: 'Costo alto', bad: 'Costo molto alto', neutral: undefined }[terT]}
-            tip={
-              ins.ter !== undefined
-                ? `Spese correnti del fondo, già incluse nel prezzo. Con TER ${fmtPct(ins.ter, 2)}: circa ${fmtNum(ins.ter * 10000, 0)} € l'anno ogni 10.000 € investiti.`
-                : 'Spese correnti del fondo, già incluse nel prezzo.'
-            }
-          />,
-        ]),
   ];
 
   return (
@@ -375,8 +380,8 @@ export function ReportView({ symbol }: { symbol: string }) {
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-x-10">
         <div className="lg:col-start-1">
           <header>
-            <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <h1 className="text-xl font-semibold leading-tight tracking-tight sm:text-3xl">{ins.name}</h1>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
               <Chip tone="accent">{typeLabel(ins.type)}</Chip>
               {ins.currency && <Chip>{ins.currency}</Chip>}
               {ins.exchange && <Chip>{exchangeLabel(ins.exchange)}</Chip>}
@@ -393,6 +398,34 @@ export function ReportView({ symbol }: { symbol: string }) {
               {m.historyEnd ? ` · dati al ${fmtDate(m.historyEnd)}` : ''}
             </p>
           </header>
+
+          <EuroVerdict
+            amount={simAmount}
+            onAmount={setSimAmount}
+            fxCost={fxCost}
+            onFxCost={setFxCost}
+            fxCostIsUser={fxCostIsUser}
+            taxCountry={profile.taxCountry}
+            fund={{
+              // without a reference there is no common period: fall back to the monthly closes
+              prices: fundSeries,
+              fees: effectiveFees(ins, userFees),
+              ter: isStock ? undefined : ins.ter,
+              currency: ins.currency,
+              distribution: ins.distribution,
+              dist: report.dist?.instrument,
+              fx: report.fx?.instrument,
+              type: ins.type,
+              assetClass: ins.assetClass,
+              govtShare: findBenchmark(ins.symbol)?.govtShare,
+            }}
+            reference={
+              benchOk && !sameAsBench && report.chart.length > 0
+                ? { prices: benchSeries, fees: effectiveFees(benchOk.profile), ter: benchTer, currency: benchOk.profile.currency, distribution: benchOk.profile.distribution, dist: report.dist?.benchmark, fx: report.fx?.benchmark, type: benchOk.profile.type, assetClass: benchOk.profile.assetClass, govtShare: findBenchmark(benchOk.profile.symbol)?.govtShare }
+                : undefined
+            }
+            referenceLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+          />
 
           <div className="mt-5">
             <SegmentedControl
@@ -413,11 +446,148 @@ export function ReportView({ symbol }: { symbol: string }) {
             )}
           </div>
 
-          <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 4 ? 'sm:grid-cols-4 lg:grid-cols-2' : 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
-            {figures}
-          </dl>
+          <CostBlock
+            fundTer={ins.ter}
+            benchTer={benchTer}
+            amount={simAmount}
+            isStock={isStock}
+            benchLabel={benchOk ? findBenchmark(benchOk.profile.symbol)?.label : undefined}
+            fundExtra={
+              isStock ? undefined : (
+                <FeeRows
+                  fees={effectiveFees(ins, userFees)}
+                  dataMissing={{ entry: !ins.entryFee, exit: !ins.exitFee }}
+                  userFees={userFees}
+                  onUserFees={setUserFees}
+                />
+              )
+            }
+            benchExtra={benchOk ? <FeeRows fees={effectiveFees(benchOk.profile)} /> : undefined}
+          />
 
-          <AiSummary report={report} fit={fit} level={level} />
+          <Section id="h-bench" title="Confronto con un riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
+            <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
+            {noPresets && (
+              <p className="mt-3 text-sm text-muted">Tipo di strumento non riconosciuto: scegli tu il riferimento</p>
+            )}
+            {!noPresets && (
+              <div role="radiogroup" aria-label="Riferimento" className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {shownPresets.map((p) => {
+                  const on = p.symbol.toUpperCase() === activeBench.toUpperCase();
+                  return (
+                    <button
+                      key={p.symbol}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => chooseBench(p.symbol)}
+                      className={cx(
+                        'pressable flex min-h-14 flex-col items-start justify-center rounded-xl border px-3 py-2 text-left',
+                        on ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-line-strong',
+                      )}
+                    >
+                      <span className={cx('text-sm font-semibold', on && 'text-accent')}>{p.label}</span>
+                      <span className="text-xs text-muted">{p.name}</span>
+                      <span className="text-xs text-muted">
+                        {p.symbol} · <span className="text-[11px]">{p.isin}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                {activeBench && !benchPreset && (
+                  <span
+                    role="radio"
+                    aria-checked="true"
+                    className="flex min-h-14 flex-col items-start justify-center rounded-xl border border-accent bg-accent-soft px-3 py-2 sm:col-span-2"
+                  >
+                    <span className="text-sm font-semibold text-accent">Personalizzato</span>
+                    <span className="text-xs text-muted">{activeBench}</span>
+                  </span>
+                )}
+              </div>
+            )}
+            {noPresets && activeBench && (
+              <p className="mt-2 text-sm text-muted">
+                Riferimento scelto: <span className="font-semibold text-ink">{findBenchmark(activeBench)?.label ?? activeBench}</span>
+              </p>
+            )}
+            {hasOptional && (
+              <label className="mt-2 flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={showOptional || optionalActive}
+                  disabled={optionalActive}
+                  onChange={(e) => setShowOptional(e.target.checked)}
+                  className="h-4 w-4 accent-[var(--accent)]"
+                />
+                Mostra anche S&amp;P 500
+              </label>
+            )}
+            <form onSubmit={submitCustom} className="mt-2 flex gap-2">
+              <label htmlFor="bench" className="sr-only">
+                Altro ticker di riferimento
+              </label>
+              <input
+                id="bench"
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+                maxLength={20}
+                placeholder="Altro ticker, es. CSPX.L"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                enterKeyHint="go"
+                aria-describedby={benchMsg ? 'bench-msg' : undefined}
+                className="h-11 min-w-0 flex-1 rounded-xl border border-line-strong/60 bg-surface px-3 text-base focus:border-accent"
+              />
+              <Button type="submit" variant="secondary" className="min-h-11 px-4 text-sm" disabled={!custom.trim()}>
+                Confronta
+              </Button>
+            </form>
+            {benchMsg && (
+              <Callout tone="worry" role="status" className="mt-2">
+                <p id="bench-msg">{benchMsg}</p>
+              </Callout>
+            )}
+
+            {report.classNote && (
+              <Callout tone="accent" className="mt-3">
+                {report.classNote}
+              </Callout>
+            )}
+
+            <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
+              {!benchOk ? (
+                needsChoice ? (
+                  <p className="mt-4 text-muted">Scegli un riferimento per vedere il confronto.</p>
+                ) : (
+                  <p className="mt-4 text-muted">
+                    Riferimento {'symbol' in report.benchmark ? report.benchmark.symbol : bench}:{' '}
+                    {'error' in report.benchmark ? report.benchmark.error : NA}
+                  </p>
+                )
+              ) : sameAsBench ? (
+                <Callout tone="accent" className="mt-4">
+                  Lo strumento coincide con il riferimento scelto: seleziona un altro riferimento per vedere un confronto.
+                </Callout>
+              ) : (
+                <>
+                  {sameFund && (
+                    <Callout tone="accent" className="mt-4">
+                      Il riferimento scelto è lo stesso strumento quotato su un&apos;altra borsa: i valori sono quasi identici.
+                    </Callout>
+                  )}
+                  {report.chart.length > 0 ? (
+                    <PriceChart data={report.chart} nameA={ins.symbol} nameB={benchOk.profile.symbol} />
+                  ) : (
+                    <p className="mt-4 text-muted">Grafico: {NA}</p>
+                  )}
+                </>
+              )}
+            </div>
+          </Section>
+
         </div>
 
         <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:[&_section]:mt-0">
@@ -462,7 +632,7 @@ export function ReportView({ symbol }: { symbol: string }) {
                   </summary>
                   <p className="mt-1 px-2 text-muted">
                     Si prendono tutti i periodi di durata pari al tuo orizzonte presenti nello storico (uno per ogni mese di partenza) e si calcola il
-                    rendimento annuo di ciascuno. Il risultato mostra il periodo peggiore e quello migliore.
+                    rendimento annuo di ciascuno. Il risultato mostra il periodo con il rendimento più basso e quello con il più alto.
                   </p>
                 </details>
               )}
@@ -471,6 +641,24 @@ export function ReportView({ symbol }: { symbol: string }) {
         </aside>
 
         <div className="lg:col-start-1">
+          <dl className={cx('mt-4 grid grid-cols-2 gap-2', figures.length === 3 && 'sm:grid-cols-3 lg:grid-cols-2 max-sm:[&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-2')}>
+            {figures}
+          </dl>
+
+          {!isStock && (
+            <SimilarProducts symbol={symbol} assetClass={insClass} volatility={report.metrics.volatility} prices={fundSeries} amount={simAmount} />
+          )}
+
+          <AiSummary report={report} fit={fit} level={level} />
+
+          {benchOk && !sameAsBench && rank >= 1 && (
+            <Section id="h-cmp" title="Confronto con il riferimento">
+              <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
+                <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />
+              </div>
+            </Section>
+          )}
+
           {rank >= 1 && (!benchOk || sameAsBench || rank >= 2) && (
             <Section id="h-perf" title={rank >= 2 ? 'Dettagli di calcolo' : 'Rendimenti per periodo'}>
               <Rows
@@ -497,94 +685,6 @@ export function ReportView({ symbol }: { symbol: string }) {
               />
             </Section>
           )}
-
-          <Section id="h-bench" title="Confronto con un riferimento" aside={refreshing ? <Spinner className="h-5 w-5 text-muted" /> : undefined}>
-            <p className="-mt-1 text-sm text-muted">{TERMS.bench}</p>
-            <div role="radiogroup" aria-label="Riferimento" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {PRESETS.map((p) => {
-                const on = p.symbol === bench;
-                return (
-                  <button
-                    key={p.symbol}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    onClick={() => chooseBench(p.symbol)}
-                    className={cx(
-                      'pressable flex min-h-14 flex-col items-start justify-center rounded-xl border px-3 py-2 text-left',
-                      on ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-line-strong',
-                    )}
-                  >
-                    <span className={cx('text-sm font-semibold', on && 'text-accent')}>{p.label}</span>
-                    <span className="text-xs text-muted">{p.detail}</span>
-                  </button>
-                );
-              })}
-              {!benchPreset && (
-                <span
-                  role="radio"
-                  aria-checked="true"
-                  className="col-span-2 flex min-h-14 flex-col items-start justify-center rounded-xl border border-accent bg-accent-soft px-3 py-2 sm:col-span-4"
-                >
-                  <span className="text-sm font-semibold text-accent">Personalizzato</span>
-                  <span className="text-xs text-muted">{bench}</span>
-                </span>
-              )}
-            </div>
-            <form onSubmit={submitCustom} className="mt-2 flex gap-2">
-              <label htmlFor="bench" className="sr-only">
-                Altro ticker di riferimento
-              </label>
-              <input
-                id="bench"
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                maxLength={20}
-                placeholder="Altro ticker, es. CSPX.L"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                enterKeyHint="go"
-                aria-describedby={benchMsg ? 'bench-msg' : undefined}
-                className="h-11 min-w-0 flex-1 rounded-xl border border-line-strong/60 bg-surface px-3 text-base focus:border-accent"
-              />
-              <Button type="submit" variant="secondary" className="min-h-11 px-4 text-sm" disabled={!custom.trim()}>
-                Confronta
-              </Button>
-            </form>
-            {benchMsg && (
-              <Callout tone="worry" role="status" className="mt-2">
-                <p id="bench-msg">{benchMsg}</p>
-              </Callout>
-            )}
-
-            <div className={cx('transition-opacity', refreshing && 'opacity-50')}>
-              {!benchOk ? (
-                <p className="mt-4 text-muted">
-                  Riferimento {bench}: {'error' in report.benchmark ? report.benchmark.error : NA}
-                </p>
-              ) : sameAsBench ? (
-                <Callout tone="accent" className="mt-4">
-                  Lo strumento coincide con il riferimento scelto: seleziona un altro riferimento per vedere un confronto.
-                </Callout>
-              ) : (
-                <>
-                  {sameFund && (
-                    <Callout tone="accent" className="mt-4">
-                      Il riferimento scelto è lo stesso strumento quotato su un&apos;altra borsa: i valori sono quasi identici.
-                    </Callout>
-                  )}
-                  {rank >= 1 && <BenchCompare a={ins} am={m} b={benchOk.profile} bm={benchOk.metrics} />}
-                  {report.chart.length > 0 ? (
-                    <PriceChart data={report.chart} nameA={ins.symbol} nameB={benchOk.profile.symbol} />
-                  ) : (
-                    <p className="mt-4 text-muted">Grafico: {NA}</p>
-                  )}
-                </>
-              )}
-            </div>
-          </Section>
 
           {(ins.holdings || ins.sectors || ins.countries || (rank >= 2 && (ins.country || !isStock))) && rank >= 1 && (
             <Section id="h-comp" title="Composizione">
@@ -654,6 +754,9 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
     ['Volatilità annua', am.volatility, bm.volatility, false, false],
     ['Perdita massima storica', am.maxDrawdown?.value, bm.maxDrawdown?.value, true, true],
   ];
+  const isinCell = (p: InstrumentProfile) => (
+    <td className="py-2.5 pr-3 text-right text-[11px] text-muted">{p.isin ?? 'Dato non disponibile'}</td>
+  );
   return (
     <table className="card mt-4 w-full table-fixed overflow-hidden rounded-2xl border border-line bg-surface text-left">
       <caption className="sr-only">
@@ -684,6 +787,13 @@ function BenchCompare({ a, am, b, bm }: { a: InstrumentProfile; am: Metrics; b: 
         </tr>
       </thead>
       <tbody className="divide-y divide-line">
+        <tr>
+          <th scope="row" className="px-4 py-2.5 text-sm font-normal text-muted">
+            ISIN
+          </th>
+          {isinCell(a)}
+          {isinCell(b)}
+        </tr>
         {rows.map(([k, x, y, higherBetter, signed]) => {
           const both = x !== undefined && y !== undefined && x !== y;
           const aWins = both && (higherBetter ? x > y : x < y);
@@ -707,7 +817,7 @@ function CompareCell({ v, signed, wins, className }: { v: number | undefined; si
   return (
     <td className={cx('py-2.5 text-right tabular-nums', className)}>
       <span className={cx('inline-flex items-center gap-1', wins ? 'font-bold' : 'font-medium')}>
-        {wins && <span className="sr-only">Migliore: </span>}
+        {wins && <span className="sr-only">Evidenziato: </span>}
         {wins && <ToneIcon tone="good" className="h-3.5 w-3.5 text-success" />}
         {signed ? <SignedPct v={v} /> : fmtPct(v)}
       </span>

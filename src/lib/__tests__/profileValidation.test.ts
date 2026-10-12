@@ -49,3 +49,15 @@ describe('profileWarnings', () => {
     expect(profileWarnings({ ...base, retirementAge: '35', horizonYears: '40' })).toEqual([]);
   });
 });
+
+describe('validateProfile taxCountry', () => {
+  const form = { age: '40', horizonYears: '10', retirementAge: '67', netWorthEur: '50000', maxDrawdownPct: '20', knowledge: 'base' as const };
+  it('is optional', () => {
+    expect(validateProfile(form).profile?.taxCountry).toBeUndefined();
+    expect(validateProfile({ ...form, taxCountry: '' }).profile?.taxCountry).toBeUndefined();
+  });
+  it('accepts a listed country and rejects others', () => {
+    expect(validateProfile({ ...form, taxCountry: 'UK' }).profile?.taxCountry).toBe('UK');
+    expect(validateProfile({ ...form, taxCountry: 'XX' as never }).errors.taxCountry).toBeDefined();
+  });
+});

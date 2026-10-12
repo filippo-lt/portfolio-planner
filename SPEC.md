@@ -4,7 +4,7 @@ Web app (Next.js App Router + TypeScript + Tailwind, UI in **Italian**). An inve
 
 ## Hard rules
 - Not a trading platform (no buy/sell/deposit), not a portfolio builder (never suggest what to buy), not financial education.
-- Similar products are allowed as guidance, not advice: the app may list products of the same asset class and type with neutral facts (ISIN, TER, fees, euro result) side by side, sorted by a stated neutral rule. No ranking words ("migliore", "conviene"), no single highlighted winner, no "compra".
+- Similar products are allowed as guidance, not advice: the app may list products of the same asset class and type with neutral facts (ISIN, TER, fees, euro result) side by side, sorted by a stated neutral rule. No ranking words ("migliore", "conviene"), no single highlighted winner, no "compra". The sort rule is stated on screen. A legal review of this feature is required only before a public launch.
 - No opinions/judgments ("buono", "cattivo", "compra", "consigliato", "adatto/non adatto" as verdicts). Only facts, numbers and comparisons with the user's profile, phrased neutrally (e.g. "Il drawdown massimo storico (-34%) supera la tolleranza indicata (-20%) di 14 punti").
 - Disclaimer visible on every page: "Informazioni a scopo informativo, non è consulenza finanziaria."
 - All external calls server-side; keys in `.env` (`ANTHROPIC_API_KEY`). Never expose keys to client.
@@ -24,7 +24,7 @@ Web app (Next.js App Router + TypeScript + Tailwind, UI in **Italian**). An inve
 - name, type (ETF/Fondo/Azione), currency, exchange
 - TER / ongoing charges (ETF, fund)
 - annualized return 1y/3y/5y, annualized volatility (daily log/simple returns × √252), historical max drawdown (on all available history, ≥5y requested)
-- benchmark comparison (default VWCE.DE – Vanguard FTSE All-World UCITS ETF Acc; user can change ticker): return, volatility, drawdown side by side + price chart of both rebased to 100
+- benchmark comparison (default depends on the instrument class: equity → VWCE.DE Vanguard FTSE All-World UCITS ETF Acc, bond → AGGH.MI iShares Core Global Aggregate Bond UCITS ETF EUR Hedged, mixed → V60A.DE Vanguard LifeStrategy 60% Equity; other/unknown has no default and the user picks one. Presets come from the curated list in `src/lib/benchmarks.ts`, filtered by class; the user can also type any ticker): return, volatility, drawdown side by side + price chart of both rebased to 100
 - top holdings, sector and country split if available
 - stocks: revenue, net income, total debt, free cash flow (latest annual)
 - Profile fit (rule-based): max drawdown vs tolerance; volatility vs horizon; currency exposure vs EUR.

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { flash, profileWarnings, saveInvestorProfile, useInvestorProfile, validateProfile, type ProfileErrors, type ProfileForm } from '@/lib/profileStore';
 import { parseItDecimal } from '@/lib/profileValidation';
 import type { Knowledge } from '@/lib/profileFit';
+import { TAX_COUNTRIES, type TaxCountry } from '@/lib/tax';
 import { Button, ButtonLink, Callout, Card, PageLoading, cx } from '@/components/ui';
 
 const EMPTY: ProfileForm = { age: '', horizonYears: '', retirementAge: '', netWorthEur: '', maxDrawdownPct: '', knowledge: '' };
@@ -22,6 +23,7 @@ export default function ProfiloPage() {
         netWorthEur: eur(saved.netWorthEur),
         maxDrawdownPct: String(saved.maxDrawdownPct).replace('.', ','),
         knowledge: saved.knowledge,
+        taxCountry: saved.taxCountry ?? '',
       }
     : EMPTY;
   return saved ? <EditProfile initial={initial} /> : <Onboarding />;
@@ -29,7 +31,7 @@ export default function ProfiloPage() {
 
 /* ---------- fields ---------- */
 
-type FieldId = Exclude<keyof ProfileForm, 'knowledge'>;
+type FieldId = Exclude<keyof ProfileForm, 'knowledge' | 'taxCountry'>;
 
 interface FieldDef {
   id: FieldId;
@@ -276,6 +278,35 @@ function KnowledgeField({ value, error, onChange }: { value: string; error?: str
   );
 }
 
+function TaxCountryField({ value, error, onChange }: { value: string; error?: string; onChange: (v: TaxCountry | '') => void }) {
+  return (
+    <div>
+      <label htmlFor="taxCountry" className="text-base font-semibold">
+        Residenza fiscale
+      </label>
+      <p id="taxCountry-hint" className="mt-1 text-sm text-muted">
+        Facoltativa. Serve a stimare le tasse sul risultato in euro; la stima è disponibile per Italia, Spagna, Germania, Francia e Regno Unito.
+      </p>
+      <select
+        id="taxCountry"
+        value={value}
+        aria-describedby="taxCountry-hint"
+        aria-invalid={!!error}
+        onChange={(e) => onChange(e.target.value as TaxCountry | '')}
+        className="mt-3 h-12 w-full rounded-xl border border-line-strong/60 bg-surface px-3 text-base focus:border-accent"
+      >
+        <option value="">Non indicata</option>
+        {TAX_COUNTRIES.map((c) => (
+          <option key={c.value} value={c.value}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+      {error && <p className="mt-2 text-sm font-medium text-error">{error}</p>}
+    </div>
+  );
+}
+
 /* ---------- first run: guided steps ---------- */
 
 const STEPS: { title: string; intro: string; fields: (keyof ProfileForm)[] }[] = [
@@ -284,7 +315,7 @@ const STEPS: { title: string; intro: string; fields: (keyof ProfileForm)[] }[] =
   {
     title: 'Rischio e dettaglio',
     intro: "L'ultimo passo: quanta oscillazione accetti e quanti dettagli vuoi vedere.",
-    fields: ['maxDrawdownPct', 'knowledge'],
+    fields: ['maxDrawdownPct', 'knowledge', 'taxCountry'],
   },
 ];
 
@@ -404,6 +435,8 @@ function Onboarding() {
           {s.fields.map((k, i) =>
             k === 'knowledge' ? (
               <KnowledgeField key={k} value={form.knowledge} error={errors.knowledge} onChange={(v) => setField('knowledge', v, true)} />
+            ) : k === 'taxCountry' ? (
+              <TaxCountryField key={k} value={form.taxCountry ?? ''} error={errors.taxCountry} onChange={(v) => setField('taxCountry', v, true)} />
             ) : (
               <NumberField
                 key={k}
@@ -442,7 +475,7 @@ function Onboarding() {
 
 /* ---------- edit mode: everything on one page ---------- */
 
-const ORDER: (keyof ProfileForm)[] = ['age', 'retirementAge', 'horizonYears', 'netWorthEur', 'maxDrawdownPct', 'knowledge'];
+const ORDER: (keyof ProfileForm)[] = ['age', 'retirementAge', 'horizonYears', 'netWorthEur', 'maxDrawdownPct', 'knowledge', 'taxCountry'];
 
 function EditProfile({ initial }: { initial: ProfileForm }) {
   const { form, setForm, errors, setErrors, setField, recheck } = useFormState(initial);
@@ -524,6 +557,7 @@ function EditProfile({ initial }: { initial: ProfileForm }) {
             <DrawdownExtras form={form} setField={setField} />
           </NumberField>
           <KnowledgeField value={form.knowledge} error={errors.knowledge} onChange={(v) => setField('knowledge', v, true)} />
+          <TaxCountryField value={form.taxCountry ?? ''} error={errors.taxCountry} onChange={(v) => setField('taxCountry', v, true)} />
         </Card>
       </div>
 

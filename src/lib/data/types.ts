@@ -1,5 +1,7 @@
 export type InstrumentType = 'ETF' | 'FUND' | 'STOCK';
 
+export type AssetClass = 'equity' | 'bond' | 'mixed' | 'other' | 'unknown';
+
 export interface Holding {
   symbol?: string;
   name: string;
@@ -23,6 +25,12 @@ export interface Fundamentals {
   currency?: string;
 }
 
+/** A one-off or performance fee as a fraction (0.01 = 1%) with where the number comes from. */
+export interface FeeValue {
+  value: number;
+  source: 'kid' | 'manual' | 'user';
+}
+
 export interface InstrumentProfile {
   symbol: string;
   name: string;
@@ -32,6 +40,9 @@ export interface InstrumentProfile {
   isin?: string;
   /** Ongoing charges as a fraction (0.0022 = 0.22%) */
   ter?: number;
+  entryFee?: FeeValue;
+  exitFee?: FeeValue;
+  performanceFee?: FeeValue;
   holdings?: Holding[];
   sectors?: Allocation[];
   countries?: Allocation[];
@@ -40,6 +51,11 @@ export interface InstrumentProfile {
   /** Company country (stocks), plain label */
   country?: string;
   fundamentals?: Fundamentals;
+  assetClass?: AssetClass;
+  /** Short Italian reason for the asset class, e.g. "Categoria Yahoo: EUR Diversified Bond" */
+  assetClassReason?: string;
+  /** Accumulating or distributing share class; undefined when neither the curated list nor the name says */
+  distribution?: 'acc' | 'dist';
 }
 
 export interface PricePoint {
@@ -47,6 +63,13 @@ export interface PricePoint {
   date: string;
   /** Adjusted close */
   close: number;
+}
+
+/** A cash payment per share (coupon or dividend), in the product's currency. */
+export interface DividendEvent {
+  /** ISO date YYYY-MM-DD of the ex-date */
+  date: string;
+  amount: number;
 }
 
 export interface SymbolCandidate {

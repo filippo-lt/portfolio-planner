@@ -21,9 +21,11 @@ interface ShareCardProps {
   title: string;
   subtitle?: string;
   chips?: string[];
+  /** Full-period simulation line, e.g. "1.000 € → 1.420 € (...)" */
+  euroLine?: string;
 }
 
-export function shareCard({ title, subtitle, chips = [] }: ShareCardProps) {
+export function shareCard({ title, subtitle, chips = [], euroLine }: ShareCardProps) {
   const titleSize = title.length > 48 ? 56 : title.length > 28 ? 68 : 84;
   return new ImageResponse(
     (
@@ -58,6 +60,7 @@ export function shareCard({ title, subtitle, chips = [] }: ShareCardProps) {
             </div>
           )}
           <div style={{ display: 'flex', fontSize: titleSize, lineHeight: 1.08, letterSpacing: -2 }}>{title}</div>
+          {euroLine && <div style={{ display: 'flex', fontSize: 40, color: '#ececf3', lineHeight: 1.2, letterSpacing: -0.5 }}>{euroLine}</div>}
           {subtitle && <div style={{ display: 'flex', fontSize: 30, color: '#a2a6b8', lineHeight: 1.35, maxWidth: 680 }}>{subtitle}</div>}
         </div>
       </div>
