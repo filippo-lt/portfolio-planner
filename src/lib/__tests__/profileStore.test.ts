@@ -30,7 +30,10 @@ describe('parseProfile tax country', () => {
   it('keeps a saved taxCountry', () => {
     expect(parseProfile(JSON.stringify({ v: 1, profile: { ...base, taxCountry: 'IT' } }))?.taxCountry).toBe('IT');
   });
-  it('rejects an unknown country', () => {
-    expect(parseProfile(JSON.stringify({ v: 1, profile: { ...base, taxCountry: 'XX' } }))).toBeNull();
+  it('ignores an unrecognised country and keeps the rest of the profile', () => {
+    const p = parseProfile(JSON.stringify({ v: 1, profile: { ...base, taxCountry: 'XX' } }));
+    expect(p).not.toBeNull();
+    expect(p?.taxCountry).toBeUndefined();
+    expect(p?.age).toBe(base.age);
   });
 });

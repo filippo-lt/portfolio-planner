@@ -48,7 +48,7 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
 const eurRange = (a: number, b: number) => (Math.round(a) === Math.round(b) ? fmtEur(a) : `da ${fmtEur(a)} a ${fmtEur(b)}`);
 
 /** Tax lines under the result; without supported rules the box says so and points to the profile. */
-function TaxLines({ sim, tax, taxCountry }: { sim: SimResult; tax: TaxEstimate | undefined; taxCountry: TaxCountry | undefined }) {
+function TaxLines({ sim, tax }: { sim: SimResult; tax: TaxEstimate | undefined }) {
   if (!tax) {
     return (
       <p className="mt-1.5 text-xs text-muted">
@@ -56,7 +56,6 @@ function TaxLines({ sim, tax, taxCountry }: { sim: SimResult; tax: TaxEstimate |
         <Link href="/profilo" className="font-medium text-accent underline underline-offset-2">
           Imposta la residenza fiscale
         </Link>
-        {taxCountry && taxCountry !== 'IT' ? ' (per il tuo paese la stima non è ancora disponibile)' : ''}
       </p>
     );
   }
@@ -100,7 +99,7 @@ function Result({ title, amount, sim, side, taxCountry }: { title: string; amoun
         <Line label="Commissioni">{feeText}</Line>
         <Line label="Valore netto">{fmtEur(sim.netValue)}</Line>
       </dl>
-      <TaxLines sim={sim} tax={tax} taxCountry={taxCountry} />
+      <TaxLines sim={sim} tax={tax} />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { AssetClass, InstrumentType } from './data/types';
 import type { InvestorProfile } from './profileFit';
+import { isTaxCountry } from './tax';
 import type { TaxCountry } from './tax/types';
 import { parseUserFees, type UserFees } from './fees';
 import { validateProfile } from './profileValidation';
@@ -58,7 +59,7 @@ export function parseProfile(raw: string | null): InvestorProfile | null {
       netWorthEur: String(o.profile.netWorthEur),
       maxDrawdownPct: String(o.profile.maxDrawdownPct),
       knowledge: o.profile.knowledge,
-      taxCountry: typeof o.profile.taxCountry === 'string' ? (o.profile.taxCountry as TaxCountry) : '',
+      taxCountry: isTaxCountry(o.profile.taxCountry) ? (o.profile.taxCountry as TaxCountry) : '',
     });
     return Object.keys(errors).length ? null : (profile ?? null);
   } catch {

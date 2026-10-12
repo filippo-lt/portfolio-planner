@@ -48,9 +48,8 @@ describe('estimateItTax', () => {
 });
 
 describe('taxRulesFor', () => {
-  it('has rules for Italy only, for now', () => {
+  it('has rules for Italy and none for OTHER', () => {
     expect(taxRulesFor('IT')).toBeDefined();
-    expect(taxRulesFor('ES')).toBeUndefined();
     expect(taxRulesFor('OTHER')).toBeUndefined();
     expect(taxRulesFor(undefined)).toBeUndefined();
   });
