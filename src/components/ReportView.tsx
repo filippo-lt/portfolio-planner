@@ -19,6 +19,7 @@ import { effectiveFees } from '@/lib/fees';
 import { EuroVerdict, chartSeries } from './EuroVerdict';
 import { SimilarProducts } from './SimilarProducts';
 import { AiSummary } from './AiSummary';
+import { Layer1Proto } from './prototype-layer1/Layer1Proto'; // PROTOTYPE (throwaway)
 import {
   BackLink,
   Button,
@@ -490,6 +491,8 @@ export function ReportView({ symbol }: { symbol: string }) {
               )}
             </div>
           </header>
+
+          <Layer1Proto report={report} /> {/* PROTOTYPE (throwaway) */}
 
           <section aria-labelledby="h-brief" className="card mt-6 scroll-mt-28 rounded-2xl border border-line bg-surface p-4 sm:p-5">
             <h2 id="h-brief" className="text-lg font-semibold tracking-tight">
