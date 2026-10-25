@@ -1,7 +1,7 @@
 // PROTOTYPE (throwaway): layer-1 variants for wayfinder ticket "What does layer 1 look like?"
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, Disclosure } from '../ui';
 import { chartTicks } from '@/lib/chartTicks';
@@ -9,7 +9,7 @@ import { fmtDate, fmtEur, fmtMonthYear, fmtNum } from '@/lib/format';
 import { DataTile, HeadlineSentence, Layer2List, NotIncluded, PeriodNote, dataPoints, type VariantProps } from './shared';
 
 /** A "Frase prima": sentence first, then a two-line chart with the gap shaded as cost. */
-export function VariantA(props: VariantProps) {
+export function VariantA(props: VariantProps & { l2Extra?: ReactNode }) {
   const { calc } = props;
   const rows = useMemo(
     () => (calc.ok ? calc.points.map((p) => ({ date: p.date, net: p.net, gross: p.gross, band: [p.net, p.gross] as [number, number] })) : []),
@@ -129,6 +129,7 @@ export function VariantA(props: VariantProps) {
         className="mt-4"
       >
         <Layer2List calc={calc} />
+        {props.l2Extra}
       </Disclosure>
     </Card>
   );
